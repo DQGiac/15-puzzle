@@ -9,6 +9,7 @@ if str(ROOT_DIR) not in sys.path:
 
 from src.ui.tab_management import render_tab1_management
 from src.ui.tab_benchmark import render_tab2_benchmark
+from src.ui.theme import inject_theme_system
 
 # 1. Cấu hình trang (Pure Streamlit API)
 st.set_page_config(
@@ -18,10 +19,13 @@ st.set_page_config(
     initial_sidebar_state="collapsed",
 )
 
-# 2. Tiêu đề ứng dụng
+# 2. Khởi tạo hệ thống Theme và nút Toggle Circular Reveal
+inject_theme_system()
+
+# 3. Tiêu đề ứng dụng
 st.title("🧩 :rainbow[15-Puzzle] & ⚡ :blue[Vector Search Engine]")
 
-# 3. Phân chia các Tab chức năng (Giữ nguyên toàn bộ cấu trúc 15-Puzzle và bổ sung Vector Engine)
+# 4. Phân chia các Tab chức năng (Giữ nguyên toàn bộ cấu trúc 15-Puzzle và bổ sung Vector Engine)
 tab_puzzle, tab_manage, tab_bench = st.tabs([
     "🧩 Trò chơi 15-Puzzle",
     "📁 Quản lý Dữ liệu Vector (Milvus Core)",

@@ -1,4 +1,5 @@
 import streamlit as st
+from src.ui.theme import inject_theme_system
 
 # 1. Cấu hình trang (Pure Streamlit API)
 st.set_page_config(
@@ -8,7 +9,10 @@ st.set_page_config(
     initial_sidebar_state="collapsed",
 )
 
-# 2. Tiêu đề rực rỡ với hiệu ứng Rainbow chính chủ của Streamlit
+# 2. Khởi tạo hệ thống Theme và nút Toggle Circular Reveal
+inject_theme_system()
+
+# 3. Tiêu đề rực rỡ với hiệu ứng Rainbow chính chủ của Streamlit
 st.title("🧩 :rainbow[15-Puzzle]")
 
 # 3. Phân chia 2 cột chính
