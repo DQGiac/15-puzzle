@@ -1,5 +1,5 @@
 class HashTable:
-    def __init__(self, cap=100):
+    def __init__(self, cap=1000):
         self.cap = cap 
         self.size = 0            
         self.buckets = [[] for _ in range(cap)]
@@ -27,7 +27,6 @@ class HashTable:
             if kv[0] == key:
                 return kv[1]
                 
-        raise KeyError(f"Không tìm thấy key: {key}")
 
     def remove(self, key):
         id = self._hash(key)
@@ -38,8 +37,15 @@ class HashTable:
                 bucket.pop(i)
                 self.size -= 1
                 return True
-                
-        raise KeyError(f"Không tìm thấy key để xóa: {key}")
+            
+    def clear(self):
+        self.buckets = [[] for _ in range(self.cap)]
+        self.size = 0
+
+    def __del__(self):
+        self.clear()
+        self.buckets = None
+        self.size = 0
 
     def __str__(self):
         elements = []
