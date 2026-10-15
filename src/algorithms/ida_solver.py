@@ -1,0 +1,3 @@
+from src.structures.hash_table import HashTable
+class IDASolver:
+    ...

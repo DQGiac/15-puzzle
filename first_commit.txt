@@ -1,0 +1,146 @@
+THIẾT KẾ HỆ THỐNG DỰ ÁN 15-PUZZLE
+1. Luồng hoạt động hệ thống (Outline)
+Hệ thống hoạt động theo vòng đời khép kín từ lúc khởi tạo đến khi phân định thắng thua, chia làm 4 luồng chính:
+Khởi tạo (Init): Đọc dữ liệu bảng xếp hạng từ bộ nhớ cục bộ. Sinh ma trận 4x4 theo thứ tự chuẩn, sau đó tự động xáo ngẫu nhiên 50 bước ngược để đảm bảo bàn cờ luôn ở trạng thái giải được 100%.
+Tương tác (Input): Hệ thống lắng nghe sự kiện từ người dùng. Các thao tác hợp lệ bao gồm click chuột vào ô kề khoảng trống, nhấn phím SPACE để kích hoạt AI giải tự động, S/L để Lưu/Tải trạng thái, và R để tạo ván mới.
+Xử lý & Cập nhật (Logic & Update): Tính toán hoán đổi vị trí trong ma trận Tile grid[4][4]. Kích hoạt hệ thống nội suy (Lerp) để render animation trượt ô ở tốc độ 60 FPS. Nếu chế độ AI bật, hệ thống chạy thuật toán tìm đường và tự động gửi tín hiệu di chuyển.
+Kết thúc (Endgame): Kiểm tra trạng thái ma trận có khớp thứ tự 1 -> 15 hay không. Cập nhật dữ liệu người chơi vào ScoreRecord và dùng thuật toán chèn (Insertion Sort) để cập nhật Top 10.
+2. Cấu trúc dữ liệu
+Hệ thống sử dụng các cấu trúc dữ liệu tùy chỉnh, hạn chế phụ thuộc thư viện chuẩn:
+Ma trận 2D: Mảng tĩnh Tile grid[4][4] để biểu diễn lưới không gian 16 ô cờ.
+Mảng động tự cấp phát (DynamicArray<T>): Quản lý các danh sách biến đổi kích thước liên tục (như lịch sử di chuyển hoặc danh sách các nút trên cây tìm kiếm). Cấu trúc này tự động cấp phát lại bộ nhớ thông qua new[]/delete[].
+Bảng băm (HashTable): Cấu trúc phân giải xung đột bằng danh sách liên kết đơn (Chaining) với 100.003 buckets. Chức năng chính là theo dõi và lưu trữ mã băm của các trạng thái bàn cờ đã được thuật toán AI duyệt qua, giúp chặt đứt các nhánh đi lặp lại.
+3. Thiết kế Hướng đối tượng (OOP)
+Các thực thể trong dự án được đóng gói thành các lớp độc lập:
+Tile: Lưu trữ value (giá trị từ 0-15) và tọa độ hiển thị trực quan pixel_x, pixel_y để hỗ trợ quá trình vẽ và nội suy chuyển động.
+Board / GameEngine: Quản lý grid và chịu trách nhiệm xử lý logic cốt lõi. Chứa phương thức kiểm tra tính giải được dựa trên công thức toán học: (N_inv + R_blank) % 2 == 1.
+AI_Solver: Lớp xử lý thuật toán tách biệt. Cài đặt thuật toán IDA* (Iterative Deepening A*) với hàm đánh giá chi phí heuristics là f = g + 2*h (trong đó h là khoảng cách Manhattan). Lớp này kết nối trực tiếp với HashTable để loại bỏ trạng thái trùng lặp.
+ScoreRecord: Gói gọn thông tin của một lượt chơi xuất sắc bao gồm tên, số bước và thời gian. Các toán tử so sánh (như operator<) được nạp chồng để phục vụ logic ưu tiên số bước ít hơn.
+4. Thiết kế Cơ sở dữ liệu (Storage)
+Do bản chất của dự án là game chạy cục bộ (Desktop hoặc Web Frontend), "Database" được triển khai dưới dạng tệp tin văn bản trực tiếp hoặc localStorage trên trình duyệt:
+Lưu trữ Bảng xếp hạng (Leaderboard): Bảng này lưu trữ cấu trúc dạng dòng văn bản theo định dạng CSV hoặc JSON. Dữ liệu ghi ra luồng thông qua toán tử operator<< trên lớp ScoreRecord và đọc lại bằng operator>>. Dữ liệu luôn bị giới hạn đúng 10 dòng (Top 10).
+Lưu trữ Trạng thái ván đấu (Save/Load States): File save.dat (hoặc biến trạng thái tạm) giữ nguyên ảnh chụp (snapshot) của bàn cờ hiện tại. Nội dung lưu bao gồm cấu trúc mảng 16 số hiện hành, số bước người chơi đã đi và bộ đếm thời gian đang dừng.
+5. Cấu trúc thư mục dự án
+Cấu trúc dưới đây thống nhất theo dự án C++ chạy desktop, tổ chức theo mô hình tách biệt giao diện, luật chơi, thuật toán AI và lưu trữ. Nếu dự án dùng framework giao diện cụ thể, phần giao diện có thể được thay bằng module tương ứng.
+15-Puzzle/
+├── CMakeLists.txt
+├── README.md
+├── .gitignore
+├── include/
+│   ├── model/
+│   │   ├── Tile.h
+│   │   ├── Board.h
+│   │   └── ScoreRecord.h
+│   ├── game/
+│   │   └── GameEngine.h
+│   ├── ai/
+│   │   └── AI_Solver.h
+│   ├── data_structures/
+│   │   ├── DynamicArray.h
+│   │   ├── HashTable.h
+│   │   └── LinkedList.h
+│   ├── storage/
+│   │   └── StorageManager.h
+│   └── ui/
+│       └── GameView.h
+├── src/
+│   ├── model/ (các file .cpp nếu có)
+│   ├── game/GameEngine.cpp
+│   ├── ai/AI_Solver.cpp
+│   ├── storage/StorageManager.cpp
+│   ├── ui/GameView.cpp
+│   └── main.cpp
+├── assets/
+│   ├── images/
+│   └── fonts/
+├── data/
+│   ├── leaderboard.csv
+│   └── save.dat
+└── tests/
+   ├── test_board.cpp
+   ├── test_ai_solver.cpp
+   └── test_storage.cpp
+6. Trách nhiệm từng module và quy tắc phụ thuộc
+Module/Class
+Trách nhiệm
+Tile
+Đại diện một ô: value (0–15); 0 là ô trống. Không tự xử lý luật chơi.
+Board
+Sở hữu trạng thái 4×4; tìm ô trống, kiểm tra nước đi hợp lệ, hoán đổi ô và kiểm tra thắng.
+GameEngine
+Điều phối ván chơi: nhận lệnh từ UI, gọi Board, cập nhật số bước/trạng thái và phát kết quả cho UI.
+AI_Solver
+Nhận bản sao trạng thái Board, tìm chuỗi nước đi bằng IDA*, trả về danh sách nước đi hoặc trạng thái không tìm thấy.
+DynamicArray<T>
+Container tự quản lý bộ nhớ; quy định rõ copy/move, destructor, toán tử gán và xử lý khi cấp phát thất bại.
+HashTable
+Lưu khóa trạng thái đã gặp; API tối thiểu: contains(key), insert(key), clear().
+ScoreRecord
+Lưu tên người chơi, số bước, thời gian; cung cấp quy tắc so sánh thống nhất để xếp hạng.
+StorageManager
+Đọc/ghi leaderboard.csv và save.dat; kiểm tra dữ liệu lỗi trước khi cập nhật trạng thái game.
+GameView
+Vẽ bàn cờ, nhận click/phím, chạy animation; không tự triển khai luật chơi hoặc thuật toán AI.
+main.cpp
+Khởi tạo các thành phần và bắt đầu vòng đời ứng dụng.
+
+7. Luồng gọi giữa các module
+Khởi động: main.cpp → StorageManager đọc bảng xếp hạng → GameEngine tạo ván mới → Board tạo trạng thái ban đầu → GameView hiển thị.
+Người chơi di chuyển: GameView nhận click/phím → GameEngine kiểm tra trạng thái ván → Board xác thực và thực hiện nước đi → GameEngine cập nhật số bước/thắng thua → GameView cập nhật hiển thị.
+AI giải: GameView gửi lệnh SPACE → GameEngine yêu cầu AI_Solver giải trên bản sao trạng thái → AI_Solver trả về chuỗi nước đi → GameEngine thực thi từng nước đi hợp lệ → GameView phát animation.
+Lưu/Tải: GameView gửi S/L → GameEngine lấy hoặc khôi phục snapshot qua StorageManager → Board xác thực snapshot trước khi chấp nhận → GameView vẽ lại.
+Kết thúc: GameEngine xác nhận thắng → tạo ScoreRecord → StorageManager đọc, xếp hạng và ghi tối đa 10 bản ghi.
+8. Hợp đồng giao tiếp tối thiểu (API)
+Module
+API đề xuất
+Board
+bool canMove(int row, int col); bool moveTile(int row, int col); bool isSolved() const; bool isSolvable() const; int blankRow() const; int blankCol() const;
+GameEngine
+bool handleMove(int row, int col); void newGame(); bool saveGame(); bool loadGame(); SolveStatus solveWithAI();
+AI_Solver
+SolveResult solve(const BoardState& initial); — không sửa trực tiếp Board đang hiển thị.
+StorageManager
+bool loadLeaderboard(...); bool saveLeaderboard(...); bool saveSnapshot(...); bool loadSnapshot(...);
+HashTable
+bool contains(const StateKey& key) const; bool insert(const StateKey& key); void clear();
+
+9. Quyết định thiết kế cần thống nhất
+Hạng mục
+Quy định / việc cần chốt
+Nền tảng giao diện
+Bản này giả định ứng dụng desktop C++; chọn Qt, SFML hoặc thư viện khác trước khi triển khai GameView.
+Định dạng leaderboard
+Chốt CSV tại data/leaderboard.csv; mỗi dòng gồm name, steps, elapsed_seconds. Nếu tên có dấu phẩy hoặc xuống dòng, cần quy tắc escape.
+Định dạng save
+Chốt data/save.dat; lưu 16 giá trị ô, số bước và thời gian đã trôi qua. Ghi phiên bản định dạng để có thể thay đổi về sau.
+Ô trống
+Quy ước value = 0; trạng thái đích là 1..15 rồi đến 0 ở ô cuối.
+Sinh bàn cờ
+Xáo bằng các nước đi hợp lệ bắt đầu từ trạng thái đích; không chọn ngẫu nhiên từng ô độc lập.
+Tính giải được
+Chỉ dùng một hàm kiểm tra tính giải được và kiểm thử với trạng thái đích, trạng thái đảo 14/15 và các trạng thái ngẫu nhiên.
+IDA* và heuristic
+Tài liệu gốc nêu f = g + 2*h. Đây là trọng số heuristic khác IDA* chuẩn f = g + h; cần xác nhận có chủ đích hay không và ghi rõ ảnh hưởng đến tính tối ưu.
+HashTable
+Quy định rõ khóa là toàn bộ trạng thái bàn cờ, không chỉ giá trị hash; xử lý va chạm bằng so sánh khóa đầy đủ. Xem lại dung lượng 100.003 buckets bằng đo đạc.
+Top 10
+Chốt thứ tự: ít bước hơn đứng trước; nếu bằng bước thì thời gian ngắn hơn đứng trước; nếu vẫn bằng thì giữ quy tắc ổn định đã chọn.
+Animation và AI
+Tách trạng thái logic khỏi tọa độ pixel; animation không được làm thay đổi luật chơi. Quy định AI có thể hủy hay không và xử lý khi người dùng thao tác giữa lúc AI chạy.
+
+10. Tiêu chí nghiệm thu
+Build được dự án từ thư mục gốc bằng hướng dẫn trong README.md.
+Mọi nước đi hợp lệ cập nhật đúng trạng thái; click ô không kề ô trống không làm thay đổi bàn cờ.
+Sinh nhiều bàn cờ mới đều tạo trạng thái giải được.
+Kiểm tra thắng đúng với trạng thái 1..15 và ô trống ở vị trí cuối.
+AI trả về chuỗi nước đi hợp lệ; áp dụng hết chuỗi thì đạt trạng thái đích hoặc trả về kết quả thất bại rõ ràng.
+Save/Load khôi phục đúng bàn cờ, số bước và thời gian; file lỗi không làm crash ứng dụng.
+Leaderboard luôn có tối đa 10 bản ghi và được sắp theo quy tắc đã chốt.
+Các cấu trúc DynamicArray và HashTable có kiểm thử riêng cho trường hợp rỗng, tăng dung lượng, va chạm và xóa/reset.
+11. Quy ước tên và biên dịch
+Tên file/class thống nhất PascalCase cho class (GameEngine, AI_Solver có thể đổi thành AISolver để nhất quán), camelCase cho hàm và biến.
+Header chỉ khai báo giao diện; phần định nghĩa đặt trong .cpp, ngoại trừ template như DynamicArray<T> thường cần định nghĩa trong header.
+CMakeLists.txt ở thư mục gốc; build output đặt trong build/ và không commit lên Git.
+README.md phải ghi phiên bản compiler, lệnh configure/build/run và vị trí file dữ liệu.
+Không để GameView truy cập trực tiếp vào nội bộ grid; mọi thay đổi trạng thái đi qua GameEngine/Board.
+
