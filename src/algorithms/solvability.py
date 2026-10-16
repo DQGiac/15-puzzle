@@ -40,6 +40,3 @@ def shuffle_board(steps: int=50): #Xao ngau nhien de tao input cho bai toan
         blank_pos=new_blank
         last_dir=chosen_d
     return tuple(board)
-#print(shuffle_board(50)) #test
-#print(is_solvable((0,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1))) #True
-#print(is_solvable((15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0))) #False
