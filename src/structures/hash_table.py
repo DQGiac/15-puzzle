@@ -26,7 +26,12 @@ class HashTable:
         for kv in bucket:
             if kv[0] == key:
                 return kv[1]
-                
+        def contains(self, key):
+        idx = self._hash(key)
+        for kv in self.buckets[idx]:
+            if kv[0] == key:
+                return True
+        return False      
 
     def remove(self, key):
         id = self._hash(key)
