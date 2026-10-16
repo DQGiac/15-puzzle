@@ -1,78 +1,433 @@
 """
-Giao diện Trò chơi 15-Puzzle (Lưới 4x4, Thống số và Bảng điều khiển).
+Giao diện Trò chơi 15-Puzzle (Lưới 4x4 tương tác, AI Solver, Save/Load, Leaderboard).
 
-Tác dụng trong dự án:
-    - Hiển thị lưới bàn cờ 4x4 bằng các nút bấm Streamlit.
-    - Hiển thị bảng số bước đi (Moves) và thời gian (Time).
-    - Cung cấp các nút điều khiển: Shuffle, Auto Solve, Save, Load.
-    - Cung cấp các nút chọn độ khó: Easy, Med, Hard.
-    - Hiển thị bảng xếp hạng Top 10.
+Tính năng:
+    - Bàn cờ 4x4 tương tác: click vào ô kề ô trống để trượt ô.
+    - Bộ đếm số bước (Moves) và thời gian thực (Time).
+    - Các nút điều khiển: Shuffle (R), Auto Solve (Space), Save (S), Load (L).
+    - Chọn độ khó: Easy (10 bước), Med (30 bước), Hard (50 bước).
+    - AI Solver tự động: Giải bằng thuật toán IDA* (Heuristic Manhattan f = g + 2*h kết hợp HashTable).
+    - Trình diễn lời giải (Step-by-step & Auto Play).
+    - Nhập ma trận từ bên ngoài và kiểm tra tính giải được (Solvability Check).
+    - Bảng xếp hạng Top 10 (Leaderboard) lưu vào leaderboard.csv.
+    - Phím tắt bàn phím: R (Shuffle), S (Save), L (Load), Space (Auto Solve), Mũi tên (Di chuyển).
 """
+
+import time
 import streamlit as st
+import streamlit.components.v1 as components
+import pandas as pd
+
+from src.models.board_state import BoardState
+from src.models.record import ScoreRecord
+from src.logic.engine import GameEngine
+from src.logic.validator import parse_and_validate_input, check_solvable
+from src.algorithms.ida_solver import IDASolver
+from src.algorithms.a_star_solver import AStarSolver
+from src.storage.storage import (
+    save_game,
+    load_game,
+    load_leaderboard,
+    add_score_record,
+)
+
+
+def init_session_state():
+    """Khởi tạo toàn bộ trạng thái trong st.session_state nếu chưa có."""
+    if "game_engine" not in st.session_state:
+        engine = GameEngine()
+        engine.reset_and_shuffle(steps=30)
+        st.session_state.game_engine = engine
+
+    if "timer_running" not in st.session_state:
+        st.session_state.timer_running = False
+
+    if "start_timestamp" not in st.session_state:
+        st.session_state.start_timestamp = None
+
+    if "accumulated_time" not in st.session_state:
+        st.session_state.accumulated_time = 0.0
+
+    if "difficulty" not in st.session_state:
+        st.session_state.difficulty = 30
+
+    if "status_message" not in st.session_state:
+        st.session_state.status_message = "Ready to play! Nhấn vào ô cạnh ô trống để di chuyển."
+
+    if "ai_solution" not in st.session_state:
+        st.session_state.ai_solution = None
+
+    if "ai_step_idx" not in st.session_state:
+        st.session_state.ai_step_idx = 0
+
+    if "ai_stats" not in st.session_state:
+        st.session_state.ai_stats = None
+
+    if "won_notified" not in st.session_state:
+        st.session_state.won_notified = False
+
+
+def get_current_time() -> float:
+    """Tính thời gian ván chơi hiện tại tính theo giây."""
+    if st.session_state.timer_running and st.session_state.start_timestamp:
+        return st.session_state.accumulated_time + (time.time() - st.session_state.start_timestamp)
+    return st.session_state.accumulated_time
+
+
+def inject_keyboard_shortcuts():
+    """Tiêm script bắt phím tắt (R: Shuffle, S: Save, L: Load, Space: Solve, Phím mũi tên)."""
+    js_code = """
+    <script>
+    (function() {
+        const doc = window.parent.document;
+        if (!doc) return;
+
+        if (window.__15puzzle_listener_attached) return;
+        window.__15puzzle_listener_attached = true;
+
+        doc.addEventListener('keydown', function(e) {
+            // Tránh bắt phím khi đang nhập trong text input hoặc text area
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+            const key = e.key.toLowerCase();
+            if (key === 'r') {
+                const btn = doc.querySelector('button[kind="secondary"]:has(span:contains("Shuffle")), button:contains("Shuffle")') ||
+                            doc.getElementById('btn_shuffle');
+                if (btn) btn.click();
+            } else if (key === 's' && !e.ctrlKey && !e.metaKey) {
+                const btn = doc.getElementById('btn_save');
+                if (btn) btn.click();
+            } else if (key === 'l' && !e.ctrlKey && !e.metaKey) {
+                const btn = doc.getElementById('btn_load');
+                if (btn) btn.click();
+            } else if (e.code === 'Space') {
+                e.preventDefault();
+                const btn = doc.getElementById('btn_solve');
+                if (btn) btn.click();
+            }
+        });
+    })();
+    </script>
+    """
+    components.html(js_code, height=0, width=0)
+
 
 def render_tab_puzzle():
-    """Render giao diện thuần túy của 15-Puzzle."""
-    board_col, controls_col = st.columns([1.1, 1], gap="large")
+    """Hàm hiển thị chính của toàn bộ giao diện 15-Puzzle."""
+    init_session_state()
+    inject_keyboard_shortcuts()
 
-    # --- CỘT TRÁI: BÀN CỜ 4x4 SÁNG RỰC RỠ & THỐNG SỐ ---
+    engine: GameEngine = st.session_state.game_engine
+    is_game_won = engine.is_win()
+
+    # Kiểm tra thắng lần đầu để dừng bộ đếm thời gian
+    if is_game_won and not st.session_state.won_notified:
+        st.session_state.timer_running = False
+        st.session_state.accumulated_time = get_current_time()
+        st.session_state.won_notified = True
+        st.session_state.status_message = "🎉 CHÚC MỪNG! Bạn đã giải thành công 15-Puzzle!"
+
+    elapsed = get_current_time()
+    engine.board_state.elapsed_time = elapsed
+
+    # Layout 2 cột: Trái (Bàn cờ & Thống số), Phải (Bảng điều khiển & Leaderboard)
+    board_col, controls_col = st.columns([1.15, 1], gap="large")
+
+    # =========================================================================
+    # CỘT TRÁI: BÀN CỜ 4x4 & THỐNG SỐ
+    # =========================================================================
     with board_col:
-        # Lưới bàn cờ 4x4: Sử dụng type="primary" để ô số sáng bừng màu chủ đạo
-        board_data = list(range(1, 16)) + [0]
-        SIZE = 4
-        for row in range(SIZE):
-            cells = st.columns(SIZE, gap="small")
-            for col in range(SIZE):
-                index = row * SIZE + col
-                val = board_data[index]
-                with cells[col]:
+        st.subheader("🎮 Bàn cờ 15-Puzzle", divider="rainbow")
+
+        grid = engine.board_state.grid
+        size = engine.board_state.size
+
+        # Render lưới 4x4
+        for r in range(size):
+            cells = st.columns(size, gap="small")
+            for c in range(size):
+                val = grid[r][c]
+                tile_can_move = engine.can_move(r, c)
+                tile_key = f"tile_{r}_{c}_{val}"
+
+                with cells[c]:
                     if val == 0:
-                        # Ô trống: nút rỗng bị disabled, nền tối tự nhiên để phân biệt với ô số
-                        st.button(" ", key=f"tile_{index}", disabled=True, use_container_width=True)
+                        # Ô trống
+                        st.button(
+                            " ",
+                            key=tile_key,
+                            disabled=True,
+                            use_container_width=True,
+                        )
                     else:
-                        # Ô số: type="primary" làm ô số sáng màu primaryColor, chữ số in đậm to rõ
-                        st.button(f"**{val}**", key=f"tile_{index}", type="primary", use_container_width=True)
+                        # Ô số: Nếu kề ô trống thì nổi bật (Primary), bấm vào sẽ trượt
+                        btn_clicked = st.button(
+                            f"**{val}**",
+                            key=tile_key,
+                            type="primary" if tile_can_move else "secondary",
+                            help=f"Nhấn để trượt ô {val} vào ô trống" if tile_can_move else None,
+                            use_container_width=True,
+                        )
 
-        st.write("")  # Khoảng cách tự nhiên
-        
-        # Khung thống số: sử dụng màu sắc nhấn mạnh
-        m_col1, m_col2 = st.columns(2)
-        m_col1.metric(label=":rainbow[Moves]", value=0)
-        m_col2.metric(label=":green[Time]", value="0.0s")
+                        if btn_clicked:
+                            if tile_can_move:
+                                # Bắt đầu đếm thời gian nếu chưa chạy
+                                if not st.session_state.timer_running and not is_game_won:
+                                    st.session_state.timer_running = True
+                                    st.session_state.start_timestamp = time.time()
 
-        # Thanh trạng thái
-        st.info("Ready to play")
+                                engine.move(r, c)
+                                st.session_state.won_notified = False
 
-    # --- CỘT PHẢI: BẢNG ĐIỀU KHIỂN & BẢNG XẾP HẠNG ---
+                                if engine.is_win():
+                                    st.session_state.timer_running = False
+                                    st.session_state.accumulated_time = get_current_time()
+                                    st.session_state.won_notified = True
+                                    st.session_state.status_message = "🎉 CHÚC MỪNG! Bạn đã giải thành công 15-Puzzle!"
+                                else:
+                                    st.session_state.status_message = f"Đã trượt ô số {val}."
+                                st.rerun()
+
+        st.write("")
+
+        # Thống số Moves và Time
+        m_col1, m_col2, m_col3 = st.columns(3)
+        m_col1.metric(label="👣 :rainbow[Moves]", value=engine.board_state.step_count)
+        m_col2.metric(label="⏱️ :green[Time]", value=f"{elapsed:.1f}s")
+        m_col3.metric(
+            label="🎯 :blue[Status]",
+            value="🏆 Won!" if is_game_won else ("▶️ Playing" if st.session_state.timer_running else "⏸️ Paused"),
+        )
+
+        # Thanh thông báo trạng thái
+        if is_game_won:
+            st.success(st.session_state.status_message)
+            st.balloons()
+            # Khung nhập tên lưu kỷ lục
+            with st.container(border=True):
+                st.write("### 🏅 Ghi danh Bảng Vàng")
+                col_name, col_submit = st.columns([2, 1])
+                with col_name:
+                    player_name = st.text_input("Tên của bạn:", value="Champion", max_chars=20)
+                with col_submit:
+                    st.write("")
+                    st.write("")
+                    if st.button("💾 Lưu Thành Tích", type="primary", use_container_width=True):
+                        rec = ScoreRecord(
+                            player_name=player_name.strip() or "Anonymous",
+                            step_count=engine.board_state.step_count,
+                            elapsed_time=elapsed,
+                        )
+                        add_score_record(rec)
+                        st.toast(f"Đã lưu thành tích của {rec.player_name} vào Top 10!", icon="🏆")
+                        st.session_state.won_notified = True
+                        st.rerun()
+        else:
+            st.info(st.session_state.status_message)
+
+        # Trình diễn bước giải của AI nếu có lời giải
+        if st.session_state.ai_solution:
+            solution = st.session_state.ai_solution
+            stats = st.session_state.ai_stats or {}
+            st.write("")
+            with st.container(border=True):
+                st.write("### 🤖 Lời giải từ AI (IDA*)")
+                st.caption(
+                    f"✨ Tìm thấy lời giải trong **{stats.get('time', 0):.3f}s** | "
+                    f"Tổng số bước: **{len(solution)}** | "
+                    f"Nút đã duyệt: **{stats.get('nodes', 0)}**"
+                )
+
+                curr_idx = st.session_state.ai_step_idx
+                step_progress = curr_idx / max(len(solution), 1)
+                st.progress(step_progress, text=f"Tiến trình: Bước {curr_idx}/{len(solution)}")
+
+                p_col1, p_col2, p_col3 = st.columns(3)
+                with p_col1:
+                    if st.button("▶️ Đi 1 bước tiếp", key="btn_next_step", use_container_width=True):
+                        if curr_idx < len(solution):
+                            next_move = solution[curr_idx]
+                            engine.move_by_direction(next_move)
+                            st.session_state.ai_step_idx += 1
+                            st.rerun()
+                with p_col2:
+                    if st.button("⏩ Giải toàn bộ", key="btn_solve_all", use_container_width=True):
+                        while st.session_state.ai_step_idx < len(solution):
+                            next_move = solution[st.session_state.ai_step_idx]
+                            engine.move_by_direction(next_move)
+                            st.session_state.ai_step_idx += 1
+                        st.rerun()
+                with p_col3:
+                    if st.button("❌ Hủy lời giải", key="btn_cancel_ai", use_container_width=True):
+                        st.session_state.ai_solution = None
+                        st.session_state.ai_step_idx = 0
+                        st.rerun()
+
+                # Hiển thị chuỗi hướng dẫn
+                moves_preview = " ➔ ".join(solution[:curr_idx])
+                if moves_preview:
+                    st.caption(f"**Đã đi:** {moves_preview}")
+                remaining = " ➔ ".join(solution[curr_idx:curr_idx + 10])
+                if remaining:
+                    st.caption(f"**Sắp tới:** {remaining} {'...' if len(solution) > curr_idx + 10 else ''}")
+
+    # =========================================================================
+    # CỘT PHẢI: ĐIỀU KHIỂN & BẢNG XẾP HẠNG
+    # =========================================================================
     with controls_col:
-        # Thẻ điều khiển Controls với thanh gạch phân cách cầu vồng
-        st.subheader("Controls", divider="rainbow")
-        control_a, control_b = st.columns(2, gap="small")
-        with control_a:
-            st.button("🔄 :blue[**Shuffle (R)**]", key="btn_shuffle", use_container_width=True)
-            st.button("💾 :violet[**Save (S)**]", key="btn_save", use_container_width=True)
-        with control_b:
-            st.button("⚡ :orange[**Auto Solve**]", key="btn_solve", use_container_width=True)
-            st.button("📂 :green[**Load (L)**]", key="btn_load", use_container_width=True)
+        st.subheader("⚙️ Điều khiển (Controls)", divider="rainbow")
 
-        # Phân cấp độ khó bằng 3 màu đặc trưng: Xanh lá (Dễ) - Cam (Vừa) - Đỏ (Khó)
-        st.caption("**Difficulty (Scramble Steps)**")
+        # Nút điều khiển chính
+        ctrl_1, ctrl_2 = st.columns(2, gap="small")
+        with ctrl_1:
+            shuffle_btn = st.button("🔄 :blue[**Shuffle (R)**]", key="btn_shuffle", use_container_width=True)
+            save_btn = st.button("💾 :violet[**Save (S)**]", key="btn_save", use_container_width=True)
+        with ctrl_2:
+            solve_btn = st.button("⚡ :orange[**Auto Solve**]", key="btn_solve", use_container_width=True)
+            load_btn = st.button("📂 :green[**Load (L)**]", key="btn_load", use_container_width=True)
+
+        # Xử lý Shuffle
+        if shuffle_btn:
+            steps = st.session_state.difficulty
+            engine.reset_and_shuffle(steps=steps)
+            st.session_state.timer_running = False
+            st.session_state.start_timestamp = None
+            st.session_state.accumulated_time = 0.0
+            st.session_state.ai_solution = None
+            st.session_state.ai_step_idx = 0
+            st.session_state.won_notified = False
+            st.session_state.status_message = f"Đã xáo mới bàn cờ với {steps} bước đảo ngược (100% giải được)!"
+            st.toast("Bàn cờ mới đã sẵn sàng!", icon="🔄")
+            st.rerun()
+
+        # Xử lý Auto Solve
+        if solve_btn:
+            board_tuple = engine.board_state.to_tuple()
+            if engine.is_win():
+                st.toast("Bàn cờ hiện tại đã ở trạng thái giải rồi!", icon="🎯")
+            else:
+                with st.spinner("AI đang tìm đường đi ngắn nhất bằng thuật toán IDA*..."):
+                    solver = IDASolver(weight=2.0, max_time_seconds=15.0)
+                    moves = solver.solve(board_tuple)
+
+                    if moves:
+                        st.session_state.ai_solution = moves
+                        st.session_state.ai_step_idx = 0
+                        st.session_state.ai_stats = {
+                            "time": solver.execution_time,
+                            "nodes": solver.nodes_expanded,
+                            "length": len(moves),
+                        }
+                        st.session_state.status_message = f"AI đã tìm thấy lời giải {len(moves)} bước trong {solver.execution_time:.3f}s!"
+                        st.toast(f"Đã tìm thấy {len(moves)} bước giải!", icon="⚡")
+                        st.rerun()
+                    else:
+                        st.error("Không tìm thấy lời giải trong thời gian giới hạn hoặc bàn cờ vô nghiệm.")
+
+        # Xử lý Save
+        if save_btn:
+            engine.board_state.elapsed_time = elapsed
+            if save_game(engine.board_state):
+                st.toast("Đã lưu trạng thái ván đấu vào data/save.dat!", icon="💾")
+                st.session_state.status_message = "Đã lưu ván đấu thành công."
+            else:
+                st.error("Lỗi khi lưu game.")
+
+        # Xử lý Load
+        if load_btn:
+            loaded_state = load_game()
+            if loaded_state:
+                engine.board_state = loaded_state
+                st.session_state.timer_running = False
+                st.session_state.start_timestamp = None
+                st.session_state.accumulated_time = loaded_state.elapsed_time
+                st.session_state.ai_solution = None
+                st.session_state.ai_step_idx = 0
+                st.session_state.won_notified = False
+                st.toast("Đã tải lại ván đấu từ data/save.dat!", icon="📂")
+                st.session_state.status_message = "Đã tải ván đấu thành công."
+                st.rerun()
+            else:
+                st.warning("Chưa có file lưu hoặc dữ liệu file không hợp lệ.")
+
+        # Độ khó (Số bước xáo)
+        st.caption("**Độ khó (Difficulty / Scramble Steps)**")
         diff_cols = st.columns(3, gap="small")
         with diff_cols[0]:
-            st.button("🟢 :green[**Easy (1)**]", key="diff_10", use_container_width=True)
+            if st.button("🟢 :green[**Easy (10)**]", key="diff_10", use_container_width=True):
+                st.session_state.difficulty = 10
+                engine.reset_and_shuffle(steps=10)
+                st.session_state.timer_running = False
+                st.session_state.accumulated_time = 0.0
+                st.session_state.ai_solution = None
+                st.session_state.won_notified = False
+                st.session_state.status_message = "Chế độ Dễ (10 bước xáo)!"
+                st.rerun()
         with diff_cols[1]:
-            st.button("🟠 :orange[**Med (2)**]", key="diff_30", use_container_width=True)
+            if st.button("🟠 :orange[**Med (30)**]", key="diff_30", use_container_width=True):
+                st.session_state.difficulty = 30
+                engine.reset_and_shuffle(steps=30)
+                st.session_state.timer_running = False
+                st.session_state.accumulated_time = 0.0
+                st.session_state.ai_solution = None
+                st.session_state.won_notified = False
+                st.session_state.status_message = "Chế độ Trung bình (30 bước xáo)!"
+                st.rerun()
         with diff_cols[2]:
-            st.button("🔴 :red[**Hard (3)**]", key="diff_50", use_container_width=True)
+            if st.button("🔴 :red[**Hard (50)**]", key="diff_50", use_container_width=True):
+                st.session_state.difficulty = 50
+                engine.reset_and_shuffle(steps=50)
+                st.session_state.timer_running = False
+                st.session_state.accumulated_time = 0.0
+                st.session_state.ai_solution = None
+                st.session_state.won_notified = False
+                st.session_state.status_message = "Chế độ Khó (50 bước xáo)!"
+                st.rerun()
 
-        # Bảng xếp hạng Top 10 với thanh gạch phân cách cầu vồng
-        st.subheader("🏆 Top 10", divider="rainbow")
-        mock_scores = [
-            {"Rank": "🥇 1", "Name": "Antigravity", "Moves": 38, "Time": "15.2s"},
-            {"Rank": "🥈 2", "Name": "Player 1", "Moves": 45, "Time": "18.0s"},
-            {"Rank": "🥉 3", "Name": "Player 2", "Moves": 58, "Time": "23.6s"},
-        ]
-        st.dataframe(
-            mock_scores,
-            use_container_width=True,
-            hide_index=True,
-        )
+        # Bảng xếp hạng Top 10
+        st.subheader("🏆 Bảng Xếp Hạng Top 10", divider="rainbow")
+        leaderboard_data = load_leaderboard()
+
+        medals = ["🥇", "🥈", "🥉", "4", "5", "6", "7", "8", "9", "10"]
+        table_rows = []
+        for i, rec in enumerate(leaderboard_data):
+            rank_str = medals[i] if i < len(medals) else str(i + 1)
+            table_rows.append({
+                "Rank": rank_str,
+                "Name": rec.player_name,
+                "Moves": rec.step_count,
+                "Time": f"{rec.elapsed_time:.1f}s",
+                "Date": rec.date_played,
+            })
+
+        if table_rows:
+            df = pd.DataFrame(table_rows)
+            st.dataframe(df, use_container_width=True, hide_index=True)
+        else:
+            st.caption("Chưa có thành tích nào được ghi nhận.")
+
+        # Nhập ma trận từ bên ngoài (Custom Board Input)
+        with st.expander("📥 Nhập Bàn Cờ Bên Ngoài (Kiểm tra tính giải được)"):
+            st.caption("Nhập dãy 16 số (từ 0 đến 15, phân tách bằng dấu phẩy hoặc khoảng trắng):")
+            sample_val = "1 2 3 4 5 6 7 8 9 10 11 12 13 14 0 15"
+            raw_input = st.text_area("Ma trận:", value=sample_val, height=70)
+            if st.button("Kiểm tra & Nạp bàn cờ", key="btn_custom_input", use_container_width=True):
+                is_valid, msg, custom_grid = parse_and_validate_input(raw_input)
+                if is_valid and custom_grid:
+                    flat = [x for row in custom_grid for x in row]
+                    empty_idx = flat.index(0)
+                    engine.board_state = BoardState(
+                        size=4,
+                        grid=custom_grid,
+                        empty_pos=(empty_idx // 4, empty_idx % 4),
+                        step_count=0,
+                        elapsed_time=0.0,
+                    )
+                    st.session_state.timer_running = False
+                    st.session_state.accumulated_time = 0.0
+                    st.session_state.ai_solution = None
+                    st.session_state.won_notified = False
+                    st.success(f"✅ {msg}")
+                    st.rerun()
+                else:
+                    st.error(f"❌ {msg}")

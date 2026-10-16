@@ -1,8 +1,141 @@
 """
-Module quản lý lưu trữ và đọc/ghi tệp dữ liệu vector.
+Module quản lý lưu trữ (Storage) cho dự án 15-Puzzle.
 
-Tác dụng trong dự án:
-    - Đọc dữ liệu từ file `data/vectors.txt` (bộ Stanford GloVe 50 chiều), phân tích cú pháp mỗi dòng thành đối tượng `VectorRecord`.
-    - Ghi dữ liệu vector từ bộ nhớ về file khi có thao tác thêm/xóa/hoàn tác nhằm đảm bảo tính bền vững (Persistence).
-    - Xử lý các ngoại lệ liên quan đến file không tồn tại, sai định dạng dòng dữ liệu.
+Chức năng theo README.md:
+    - Lưu trữ Bảng xếp hạng (Leaderboard): Lưu dữ liệu Top 10 lượt chơi vào file CSV.
+    - Lưu trữ Trạng thái ván đấu: File save.dat chụp ảnh snapshot bàn cờ (16 số, số bước, thời gian).
 """
+
+import json
+from pathlib import Path
+from src.models.board_state import BoardState
+from src.models.record import ScoreRecord
+
+DEFAULT_DATA_DIR = Path(__file__).resolve().parent.parent.parent / "data"
+DEFAULT_SAVE_FILE = DEFAULT_DATA_DIR / "save.dat"
+DEFAULT_LEADERBOARD_FILE = DEFAULT_DATA_DIR / "leaderboard.csv"
+
+
+def ensure_data_dir(filepath: Path | str) -> Path:
+    """Đảm bảo thư mục cha tồn tại."""
+    path = Path(filepath)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    return path
+
+
+def save_game(board_state: BoardState, filepath: Path | str = DEFAULT_SAVE_FILE) -> bool:
+    """
+    Lưu trạng thái ván đấu hiện tại vào file save.dat.
+    Nội dung bao gồm mảng 16 số, số bước đi và thời gian đã trôi qua.
+    """
+    path = ensure_data_dir(filepath)
+    data = {
+        "grid": board_state.grid,
+        "empty_pos": list(board_state.empty_pos),
+        "step_count": board_state.step_count,
+        "elapsed_time": board_state.elapsed_time,
+    }
+    try:
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2)
+        return True
+    except Exception as e:
+        print(f"Lỗi khi lưu game vào {path}: {e}")
+        return False
+
+
+def load_game(filepath: Path | str = DEFAULT_SAVE_FILE) -> BoardState | None:
+    """
+    Tải trạng thái ván đấu từ file save.dat.
+    Trả về đối tượng BoardState hoặc None nếu file không hợp lệ.
+    """
+    path = Path(filepath)
+    if not path.is_file():
+        return None
+
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+
+        grid = data["grid"]
+        empty_pos = tuple(data.get("empty_pos", (3, 3)))
+        step_count = data.get("step_count", 0)
+        elapsed_time = data.get("elapsed_time", 0.0)
+
+        return BoardState(
+            size=len(grid),
+            grid=grid,
+            empty_pos=empty_pos,
+            step_count=step_count,
+            elapsed_time=elapsed_time,
+        )
+    except Exception as e:
+        print(f"Lỗi khi tải game từ {path}: {e}")
+        return None
+
+
+def load_leaderboard(filepath: Path | str = DEFAULT_LEADERBOARD_FILE) -> list[ScoreRecord]:
+    """
+    Tải danh sách bảng xếp hạng từ file CSV.
+    Tự động sắp xếp ưu tiên số bước ít hơn, sau đó thời gian ngắn hơn.
+    """
+    path = Path(filepath)
+    if not path.is_file():
+        # Trả về dữ liệu mẫu mặc định nếu file chưa có
+        default_mock = [
+            ScoreRecord(player_name="Antigravity", step_count=38, elapsed_time=15.2),
+            ScoreRecord(player_name="Player 1", step_count=45, elapsed_time=18.0),
+            ScoreRecord(player_name="Player 2", step_count=58, elapsed_time=23.6),
+        ]
+        save_leaderboard(default_mock, filepath)
+        return default_mock
+
+    records: list[ScoreRecord] = []
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith("#") or line.startswith("Player"):
+                    continue
+                try:
+                    records.append(ScoreRecord.from_csv_line(line))
+                except ValueError:
+                    continue
+
+        records.sort()
+        return records[:10]
+    except Exception as e:
+        print(f"Lỗi khi tải leaderboard từ {path}: {e}")
+        return []
+
+
+def save_leaderboard(
+    records: list[ScoreRecord],
+    filepath: Path | str = DEFAULT_LEADERBOARD_FILE,
+) -> bool:
+    """Lưu danh sách xếp hạng vào file CSV."""
+    path = ensure_data_dir(filepath)
+    records.sort()
+    top_10 = records[:10]
+    try:
+        with open(path, "w", encoding="utf-8") as f:
+            f.write("PlayerName,StepCount,ElapsedTime,DatePlayed\n")
+            for rec in top_10:
+                f.write(rec.to_csv_line() + "\n")
+        return True
+    except Exception as e:
+        print(f"Lỗi khi lưu leaderboard vào {path}: {e}")
+        return False
+
+
+def add_score_record(
+    record: ScoreRecord,
+    filepath: Path | str = DEFAULT_LEADERBOARD_FILE,
+) -> list[ScoreRecord]:
+    """Thêm một kỷ lục mới vào bảng xếp hạng, sắp xếp và giữ lại Top 10."""
+    current = load_leaderboard(filepath)
+    current.append(record)
+    current.sort()
+    top_10 = current[:10]
+    save_leaderboard(top_10, filepath)
+    return top_10
