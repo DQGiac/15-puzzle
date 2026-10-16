@@ -55,7 +55,12 @@ class IDASolver:
                 path.pop()
                 state[empty_pos],state[new_pos]=(state[new_pos],state[empty_pos])
         return min_threshold
-    def solve(self,initial_state:tuple):
+    def solve(self,initial_state):
+        if isinstance(initial_state,list) and isinstance(initial_state[0],list):
+            initial_state=tuple(tile for row in initial_state for tile in row)
+        else:
+            initial_state=tuple(initial_state)
+
         if not is_solvable(initial_state):
             print("Lỗi: Bàn cờ này vô nghiệm")
             return []

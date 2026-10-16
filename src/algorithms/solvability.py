@@ -1,7 +1,6 @@
 import random
 
 GOAL_STATE=(1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,0)
-
 def count_inversions(state): #Ham dem nghich the
     inversions=0
     tiles=[x for x in state if x!=0]
