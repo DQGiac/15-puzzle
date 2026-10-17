@@ -8,8 +8,8 @@ class IDASolver:
     MOVE_NAMES=["UP","DOWN","LEFT","RIGHT"]
     def __init__(self,weight=2):
         self._weight=2
-        # self._visited=HashTable() #cho khi nao co hash tu Danh
-        self._visited=dict()
+        self._visited=HashTable() #cho khi nao co hash tu Danh
+        # self._visited=dict()
 
     def _manhattan_distance(self,state:list) -> int:
         dist=0
@@ -29,11 +29,10 @@ class IDASolver:
         if h==0:
             return -1
         state_key=tuple(state)
-        # if self._visited.contains(state_key):
-        #     return float("inf")
-        if state_key in self._visited and self._visited[state_key]<=g:
+        if self._visited.contains(state_key):
             return float("inf")
-        self._visited[state_key]=g
+        # if state_key in self._visited and self._visited[state_key]<=g:
+        #     return float("inf")
         min_threshold=float("inf")
         empty_row=empty_pos//4
         empty_col=empty_pos%4
