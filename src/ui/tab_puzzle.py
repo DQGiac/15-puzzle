@@ -10,7 +10,7 @@ Tính năng:
     - Trình diễn lời giải (Step-by-step & Auto Play).
     - Nhập ma trận từ bên ngoài và kiểm tra tính giải được (Solvability Check).
     - Bảng xếp hạng Top 10 (Leaderboard) lưu vào leaderboard.csv.
-    - Phím tắt bàn phím: R (Shuffle), S (Save), L (Load), Space (Auto Solve), Mũi tên (Di chuyển).
+    - Phím tắt bàn phím: R (Shuffle), S (Save), L (Load), Space (Auto Solve).
 """
 
 import time
@@ -21,9 +21,8 @@ import pandas as pd
 from src.models.board_state import BoardState
 from src.models.record import ScoreRecord
 from src.logic.engine import GameEngine
-from src.logic.validator import parse_and_validate_input, check_solvable
+from src.logic.validator import parse_and_validate_input
 from src.algorithms.ida_solver import IDASolver
-from src.algorithms.a_star_solver import AStarSolver
 from src.storage.storage import (
     save_game,
     load_game,
@@ -52,7 +51,7 @@ def init_session_state():
         st.session_state.difficulty = 30
 
     if "status_message" not in st.session_state:
-        st.session_state.status_message = "Ready to play! Nhấn vào ô cạnh ô trống để di chuyển."
+        st.session_state.status_message = "Sẵn sàng! Nhấn vào ô sáng màu bên cạnh ô trống để trượt."
 
     if "ai_solution" not in st.session_state:
         st.session_state.ai_solution = None
@@ -75,7 +74,7 @@ def get_current_time() -> float:
 
 
 def inject_keyboard_shortcuts():
-    """Tiêm script bắt phím tắt (R: Shuffle, S: Save, L: Load, Space: Solve, Phím mũi tên)."""
+    """Tiêm script bắt phím tắt (R: Shuffle, S: Save, L: Load, Space: Solve)."""
     js_code = """
     <script>
     (function() {
@@ -86,13 +85,11 @@ def inject_keyboard_shortcuts():
         window.__15puzzle_listener_attached = true;
 
         doc.addEventListener('keydown', function(e) {
-            // Tránh bắt phím khi đang nhập trong text input hoặc text area
             if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
 
             const key = e.key.toLowerCase();
             if (key === 'r') {
-                const btn = doc.querySelector('button[kind="secondary"]:has(span:contains("Shuffle")), button:contains("Shuffle")') ||
-                            doc.getElementById('btn_shuffle');
+                const btn = doc.getElementById('btn_shuffle');
                 if (btn) btn.click();
             } else if (key === 's' && !e.ctrlKey && !e.metaKey) {
                 const btn = doc.getElementById('btn_save');
@@ -131,7 +128,7 @@ def render_tab_puzzle():
     engine.board_state.elapsed_time = elapsed
 
     # Layout 2 cột: Trái (Bàn cờ & Thống số), Phải (Bảng điều khiển & Leaderboard)
-    board_col, controls_col = st.columns([1.15, 1], gap="large")
+    board_col, controls_col = st.columns([1.18, 1], gap="large")
 
     # =========================================================================
     # CỘT TRÁI: BÀN CỜ 4x4 & THỐNG SỐ
@@ -142,68 +139,70 @@ def render_tab_puzzle():
         grid = engine.board_state.grid
         size = engine.board_state.size
 
-        # Render lưới 4x4
-        for r in range(size):
-            cells = st.columns(size, gap="small")
-            for c in range(size):
-                val = grid[r][c]
-                tile_can_move = engine.can_move(r, c)
-                tile_key = f"tile_{r}_{c}_{val}"
+        # Khung bàn cờ 4x4 dạng khay nổi
+        with st.container():
+            for r in range(size):
+                cells = st.columns(size, gap="small")
+                for c in range(size):
+                    val = grid[r][c]
+                    tile_can_move = engine.can_move(r, c)
+                    tile_key = f"tile_{r}_{c}_{val}"
 
-                with cells[c]:
-                    if val == 0:
-                        # Ô trống
-                        st.button(
-                            " ",
-                            key=tile_key,
-                            disabled=True,
-                            use_container_width=True,
-                        )
-                    else:
-                        # Ô số: Nếu kề ô trống thì nổi bật (Primary), bấm vào sẽ trượt
-                        btn_clicked = st.button(
-                            f"**{val}**",
-                            key=tile_key,
-                            type="primary" if tile_can_move else "secondary",
-                            help=f"Nhấn để trượt ô {val} vào ô trống" if tile_can_move else None,
-                            use_container_width=True,
-                        )
+                    with cells[c]:
+                        if val == 0:
+                            # Ô trống: Disabled, tạo hốc lõm 3D
+                            st.button(
+                                " ",
+                                key=tile_key,
+                                disabled=True,
+                                use_container_width=True,
+                            )
+                        else:
+                            # Ô số: Nếu có thể di chuyển -> Type Primary (Sáng màu, nổi bật)
+                            # Nếu không di chuyển được -> Type Secondary (Màu thẻ sắc nét, viền rõ)
+                            btn_clicked = st.button(
+                                str(val),
+                                key=tile_key,
+                                type="primary" if tile_can_move else "secondary",
+                                help=f"Nhấn để trượt ô {val} vào ô trống" if tile_can_move else None,
+                                use_container_width=True,
+                            )
 
-                        if btn_clicked:
-                            if tile_can_move:
-                                # Bắt đầu đếm thời gian nếu chưa chạy
-                                if not st.session_state.timer_running and not is_game_won:
-                                    st.session_state.timer_running = True
-                                    st.session_state.start_timestamp = time.time()
+                            if btn_clicked:
+                                if tile_can_move:
+                                    if not st.session_state.timer_running and not is_game_won:
+                                        st.session_state.timer_running = True
+                                        st.session_state.start_timestamp = time.time()
 
-                                engine.move(r, c)
-                                st.session_state.won_notified = False
+                                    engine.move(r, c)
+                                    st.session_state.won_notified = False
 
-                                if engine.is_win():
-                                    st.session_state.timer_running = False
-                                    st.session_state.accumulated_time = get_current_time()
-                                    st.session_state.won_notified = True
-                                    st.session_state.status_message = "🎉 CHÚC MỪNG! Bạn đã giải thành công 15-Puzzle!"
-                                else:
-                                    st.session_state.status_message = f"Đã trượt ô số {val}."
-                                st.rerun()
+                                    if engine.is_win():
+                                        st.session_state.timer_running = False
+                                        st.session_state.accumulated_time = get_current_time()
+                                        st.session_state.won_notified = True
+                                        st.session_state.status_message = "🎉 CHÚC MỪNG! Bạn đã hoàn thành xuất sắc!"
+                                    else:
+                                        st.session_state.status_message = f"Đã trượt ô số {val} vào ô trống."
+                                    st.rerun()
 
         st.write("")
 
-        # Thống số Moves và Time
+        # Khung thẻ thống số: Moves, Time, Status
         m_col1, m_col2, m_col3 = st.columns(3)
-        m_col1.metric(label="👣 :rainbow[Moves]", value=engine.board_state.step_count)
-        m_col2.metric(label="⏱️ :green[Time]", value=f"{elapsed:.1f}s")
+        m_col1.metric(label="Bước đi (Moves)", value=engine.board_state.step_count)
+        m_col2.metric(label="Thời gian (Time)", value=f"{elapsed:.1f}s")
         m_col3.metric(
-            label="🎯 :blue[Status]",
-            value="🏆 Won!" if is_game_won else ("▶️ Playing" if st.session_state.timer_running else "⏸️ Paused"),
+            label="Trạng thái (Status)",
+            value="🏆 Thắng cuộc!" if is_game_won else ("▶️ Đang chơi" if st.session_state.timer_running else "⏸️ Tạm dừng"),
         )
 
-        # Thanh thông báo trạng thái
+        st.write("")
+
+        # Thông báo trạng thái
         if is_game_won:
             st.success(st.session_state.status_message)
             st.balloons()
-            # Khung nhập tên lưu kỷ lục
             with st.container(border=True):
                 st.write("### 🏅 Ghi danh Bảng Vàng")
                 col_name, col_submit = st.columns([2, 1])
@@ -225,7 +224,7 @@ def render_tab_puzzle():
         else:
             st.info(st.session_state.status_message)
 
-        # Trình diễn bước giải của AI nếu có lời giải
+        # Trình diễn bước giải của AI nếu đã tìm ra lời giải
         if st.session_state.ai_solution:
             solution = st.session_state.ai_solution
             stats = st.session_state.ai_stats or {}
@@ -263,7 +262,6 @@ def render_tab_puzzle():
                         st.session_state.ai_step_idx = 0
                         st.rerun()
 
-                # Hiển thị chuỗi hướng dẫn
                 moves_preview = " ➔ ".join(solution[:curr_idx])
                 if moves_preview:
                     st.caption(f"**Đã đi:** {moves_preview}")
@@ -277,14 +275,14 @@ def render_tab_puzzle():
     with controls_col:
         st.subheader("⚙️ Điều khiển (Controls)", divider="rainbow")
 
-        # Nút điều khiển chính
+        # Khung nút điều khiển chính
         ctrl_1, ctrl_2 = st.columns(2, gap="small")
         with ctrl_1:
-            shuffle_btn = st.button("🔄 :blue[**Shuffle (R)**]", key="btn_shuffle", use_container_width=True)
-            save_btn = st.button("💾 :violet[**Save (S)**]", key="btn_save", use_container_width=True)
+            shuffle_btn = st.button("🔄 Shuffle (R)", key="btn_shuffle", use_container_width=True)
+            save_btn = st.button("💾 Save Game (S)", key="btn_save", use_container_width=True)
         with ctrl_2:
-            solve_btn = st.button("⚡ :orange[**Auto Solve**]", key="btn_solve", use_container_width=True)
-            load_btn = st.button("📂 :green[**Load (L)**]", key="btn_load", use_container_width=True)
+            solve_btn = st.button("⚡ Auto Solve (Space)", key="btn_solve", use_container_width=True)
+            load_btn = st.button("📂 Load Game (L)", key="btn_load", use_container_width=True)
 
         # Xử lý Shuffle
         if shuffle_btn:
@@ -350,11 +348,11 @@ def render_tab_puzzle():
             else:
                 st.warning("Chưa có file lưu hoặc dữ liệu file không hợp lệ.")
 
-        # Độ khó (Số bước xáo)
-        st.caption("**Độ khó (Difficulty / Scramble Steps)**")
+        # Phân cấp độ khó
+        st.caption("**Độ khó (Difficulty / Số bước xáo)**")
         diff_cols = st.columns(3, gap="small")
         with diff_cols[0]:
-            if st.button("🟢 :green[**Easy (10)**]", key="diff_10", use_container_width=True):
+            if st.button("🟢 Dễ (10)", key="diff_10", use_container_width=True):
                 st.session_state.difficulty = 10
                 engine.reset_and_shuffle(steps=10)
                 st.session_state.timer_running = False
@@ -364,7 +362,7 @@ def render_tab_puzzle():
                 st.session_state.status_message = "Chế độ Dễ (10 bước xáo)!"
                 st.rerun()
         with diff_cols[1]:
-            if st.button("🟠 :orange[**Med (30)**]", key="diff_30", use_container_width=True):
+            if st.button("🟠 Vừa (30)", key="diff_30", use_container_width=True):
                 st.session_state.difficulty = 30
                 engine.reset_and_shuffle(steps=30)
                 st.session_state.timer_running = False
@@ -374,7 +372,7 @@ def render_tab_puzzle():
                 st.session_state.status_message = "Chế độ Trung bình (30 bước xáo)!"
                 st.rerun()
         with diff_cols[2]:
-            if st.button("🔴 :red[**Hard (50)**]", key="diff_50", use_container_width=True):
+            if st.button("🔴 Khó (50)", key="diff_50", use_container_width=True):
                 st.session_state.difficulty = 50
                 engine.reset_and_shuffle(steps=50)
                 st.session_state.timer_running = False
@@ -388,27 +386,47 @@ def render_tab_puzzle():
         st.subheader("🏆 Bảng Xếp Hạng Top 10", divider="rainbow")
         leaderboard_data = load_leaderboard()
 
-        medals = ["🥇", "🥈", "🥉", "4", "5", "6", "7", "8", "9", "10"]
-        table_rows = []
-        for i, rec in enumerate(leaderboard_data):
-            rank_str = medals[i] if i < len(medals) else str(i + 1)
-            table_rows.append({
-                "Rank": rank_str,
-                "Name": rec.player_name,
-                "Moves": rec.step_count,
-                "Time": f"{rec.elapsed_time:.1f}s",
-                "Date": rec.date_played,
-            })
+        if leaderboard_data:
+            medals = ["🥇 1", "🥈 2", "🥉 3", "4", "5", "6", "7", "8", "9", "10"]
+            rows_html = ""
+            for i, rec in enumerate(leaderboard_data):
+                rank_badge = medals[i] if i < len(medals) else str(i + 1)
+                rank_class = f"rank-{i+1}" if i < 3 else "rank-normal"
+                rows_html += f"""
+                <tr class="{rank_class}">
+                    <td style="font-weight: 800; font-size: 1.05rem;">{rank_badge}</td>
+                    <td><strong>{rec.player_name}</strong></td>
+                    <td><span class="badge-steps">{rec.step_count}</span></td>
+                    <td style="font-weight: 700;">{rec.elapsed_time:.1f}s</td>
+                    <td style="color: inherit; opacity: 0.85; font-size: 0.85rem;">{rec.date_played}</td>
+                </tr>
+                """
 
-        if table_rows:
-            df = pd.DataFrame(table_rows)
-            st.dataframe(df, use_container_width=True, hide_index=True)
+            table_html = f"""
+            <div class="leaderboard-card">
+                <table class="leaderboard-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 14%;">Hạng</th>
+                            <th style="width: 32%;">Người chơi</th>
+                            <th style="width: 18%;">Số bước</th>
+                            <th style="width: 16%;">Thời gian</th>
+                            <th style="width: 20%;">Ngày chơi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {rows_html}
+                    </tbody>
+                </table>
+            </div>
+            """
+            st.html(table_html)
         else:
             st.caption("Chưa có thành tích nào được ghi nhận.")
 
-        # Nhập ma trận từ bên ngoài (Custom Board Input)
-        with st.expander("📥 Nhập Bàn Cờ Bên Ngoài (Kiểm tra tính giải được)"):
-            st.caption("Nhập dãy 16 số (từ 0 đến 15, phân tách bằng dấu phẩy hoặc khoảng trắng):")
+        # Nhập ma trận từ bên ngoài
+        with st.expander("📥 Nhập Bàn Cờ Tùy Biến (Kiểm tra tính giải được)"):
+            st.caption("Nhập dãy 16 số (0-15 phân cách bằng khoảng trắng hoặc dấu phẩy):")
             sample_val = "1 2 3 4 5 6 7 8 9 10 11 12 13 14 0 15"
             raw_input = st.text_area("Ma trận:", value=sample_val, height=70)
             if st.button("Kiểm tra & Nạp bàn cờ", key="btn_custom_input", use_container_width=True):

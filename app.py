@@ -2,7 +2,6 @@ import sys
 from pathlib import Path
 import streamlit as st
 
-# Đảm bảo đường dẫn gốc cho các import trong src
 ROOT_DIR = Path(__file__).resolve().parent
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
@@ -21,8 +20,9 @@ st.set_page_config(
 # 2. Khởi tạo hệ thống Theme và nút Toggle Circular Reveal
 inject_theme_system()
 
-# 3. Tiêu đề ứng dụng
-st.title("🧩 :rainbow[15-Puzzle Game]")
+# 3. Tiêu đề ứng dụng bão hòa cao, tương phản sắc nét trong cả Light & Dark
+st.markdown('<div class="app-title-gradient">🧩 15-Puzzle Game</div>', unsafe_allow_html=True)
+st.caption("Trò chơi trượt ô số 4x4 kinh điển với giải thuật AI thông minh (IDA*) và bảng xếp hạng Top 10")
 
 # 4. Hiển thị giao diện chính của 15-Puzzle
 render_tab_puzzle()
