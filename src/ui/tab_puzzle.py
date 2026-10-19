@@ -23,6 +23,11 @@ from src.models.record import ScoreRecord
 from src.logic.engine import GameEngine
 from src.logic.validator import parse_and_validate_input
 from src.algorithms.ida_solver import IDASolver
+try:
+    from src.algorithms.a_star_solver import AStarSolver
+except ImportError:
+    AStarSolver = None
+
 from src.storage.storage import (
     save_game,
     load_game,
@@ -31,12 +36,26 @@ from src.storage.storage import (
 )
 
 
+def apply_direction_move(engine: GameEngine, direction: str) -> bool:
+    """Di chuyển ô cờ an toàn theo hướng di chuyển của AI."""
+    if hasattr(engine, "move_by_direction"):
+        return engine.move_by_direction(direction)
+    directions = {"UP": (-1, 0), "DOWN": (1, 0), "LEFT": (0, -1), "RIGHT": (0, 1)}
+    dr, dc = directions.get(direction.upper(), (0, 0))
+    er, ec = engine.board_state.empty_pos
+    return engine.move(er + dr, ec + dc)
+
+
 def init_session_state():
     """Khởi tạo toàn bộ trạng thái trong st.session_state nếu chưa có."""
     if "game_engine" not in st.session_state:
-        engine = GameEngine()
+        board = BoardState()
+        engine = GameEngine(board)
         engine.reset_and_shuffle(steps=30)
         st.session_state.game_engine = engine
+
+    if "ai_algorithm" not in st.session_state:
+        st.session_state.ai_algorithm = "IDA*"
 
     if "timer_running" not in st.session_state:
         st.session_state.timer_running = False
@@ -138,6 +157,7 @@ def render_tab_puzzle():
 
         grid = engine.board_state.grid
         size = engine.board_state.size
+        valid_moves = set(engine.get_valid_moves())
 
         # Khung bàn cờ 4x4 dạng khay nổi
         with st.container():
@@ -145,7 +165,7 @@ def render_tab_puzzle():
                 cells = st.columns(size, gap="small")
                 for c in range(size):
                     val = grid[r][c]
-                    tile_can_move = engine.can_move(r, c)
+                    tile_can_move = (r, c) in valid_moves
                     tile_key = f"tile_{r}_{c}_{val}"
 
                     with cells[c]:
@@ -230,7 +250,8 @@ def render_tab_puzzle():
             stats = st.session_state.ai_stats or {}
             st.write("")
             with st.container(border=True):
-                st.write("### 🤖 Lời giải từ AI (IDA*)")
+                algo_used = stats.get("algo", "IDA*")
+                st.write(f"### 🤖 Lời giải từ AI ({algo_used})")
                 st.caption(
                     f"✨ Tìm thấy lời giải trong **{stats.get('time', 0):.3f}s** | "
                     f"Tổng số bước: **{len(solution)}** | "
@@ -246,15 +267,16 @@ def render_tab_puzzle():
                     if st.button("▶️ Đi 1 bước tiếp", key="btn_next_step", use_container_width=True):
                         if curr_idx < len(solution):
                             next_move = solution[curr_idx]
-                            engine.move_by_direction(next_move)
+                            apply_direction_move(engine, next_move)
                             st.session_state.ai_step_idx += 1
                             st.rerun()
                 with p_col2:
                     if st.button("⏩ Giải toàn bộ", key="btn_solve_all", use_container_width=True):
                         while st.session_state.ai_step_idx < len(solution):
                             next_move = solution[st.session_state.ai_step_idx]
-                            engine.move_by_direction(next_move)
+                            apply_direction_move(engine, next_move)
                             st.session_state.ai_step_idx += 1
+                        st.session_state.status_message = "🎉 AI đã hoàn thành giải toàn bộ bàn cờ!"
                         st.rerun()
                 with p_col3:
                     if st.button("❌ Hủy lời giải", key="btn_cancel_ai", use_container_width=True):
@@ -274,6 +296,19 @@ def render_tab_puzzle():
     # =========================================================================
     with controls_col:
         st.subheader("⚙️ Điều khiển (Controls)", divider="rainbow")
+
+        # Tùy chọn thuật toán AI
+        if AStarSolver is not None:
+            algo_labels = ["IDA* (Heuristic Manhattan)", "A* (MinHeap Queue)"]
+            selected_label = st.radio(
+                "Thuật toán AI tự động giải:",
+                options=algo_labels,
+                index=0,
+                horizontal=True,
+            )
+            st.session_state.ai_algorithm = "A*" if "A*" in selected_label else "IDA*"
+        else:
+            st.session_state.ai_algorithm = "IDA*"
 
         # Khung nút điều khiển chính
         ctrl_1, ctrl_2 = st.columns(2, gap="small")
@@ -300,24 +335,38 @@ def render_tab_puzzle():
 
         # Xử lý Auto Solve
         if solve_btn:
-            board_tuple = engine.board_state.to_tuple()
+            if hasattr(engine.board_state, "to_tuple"):
+                board_tuple = engine.board_state.to_tuple()
+            else:
+                board_tuple = tuple(val for row in engine.board_state.grid for val in row)
+
             if engine.is_win():
                 st.toast("Bàn cờ hiện tại đã ở trạng thái giải rồi!", icon="🎯")
             else:
-                with st.spinner("AI đang tìm đường đi ngắn nhất bằng thuật toán IDA*..."):
-                    solver = IDASolver(weight=2.0, max_time_seconds=15.0)
-                    moves = solver.solve(board_tuple)
+                algo_name = st.session_state.get("ai_algorithm", "IDA*")
+                with st.spinner(f"AI đang tìm đường đi ngắn nhất bằng thuật toán {algo_name}..."):
+                    start_t = time.perf_counter()
+                    if algo_name == "A*" and AStarSolver is not None:
+                        solver = AStarSolver()
+                        moves = solver.solve(board_tuple)
+                    else:
+                        solver = IDASolver(weight=2)
+                        moves = solver.solve(board_tuple)
+                    elapsed_solve = time.perf_counter() - start_t
 
                     if moves:
                         st.session_state.ai_solution = moves
                         st.session_state.ai_step_idx = 0
+                        calc_time = getattr(solver, "execution_time", elapsed_solve)
+                        calc_nodes = getattr(solver, "nodes_expanded", len(moves))
                         st.session_state.ai_stats = {
-                            "time": solver.execution_time,
-                            "nodes": solver.nodes_expanded,
+                            "time": calc_time,
+                            "nodes": calc_nodes,
                             "length": len(moves),
+                            "algo": algo_name,
                         }
-                        st.session_state.status_message = f"AI đã tìm thấy lời giải {len(moves)} bước trong {solver.execution_time:.3f}s!"
-                        st.toast(f"Đã tìm thấy {len(moves)} bước giải!", icon="⚡")
+                        st.session_state.status_message = f"AI ({algo_name}) đã tìm thấy lời giải {len(moves)} bước trong {calc_time:.3f}s!"
+                        st.toast(f"Đã tìm thấy {len(moves)} bước giải ({algo_name})!", icon="⚡")
                         st.rerun()
                     else:
                         st.error("Không tìm thấy lời giải trong thời gian giới hạn hoặc bàn cờ vô nghiệm.")
