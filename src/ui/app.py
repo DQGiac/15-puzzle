@@ -14,7 +14,8 @@ def main():
         initial_sidebar_state="collapsed",
     )
     inject_theme_system()
-    st.title("🧩 :rainbow[15-Puzzle Game]")
+    st.markdown('<div class="app-title-gradient">🧩 15-Puzzle Game</div>', unsafe_allow_html=True)
+    st.caption("Trò chơi trượt ô số 4x4 kinh điển với giải thuật AI thông minh (IDA*) và bảng xếp hạng Top 10")
     render_tab_puzzle()
 
 
