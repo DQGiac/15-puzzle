@@ -92,6 +92,21 @@ def get_current_time() -> float:
     return st.session_state.accumulated_time
 
 
+def stop_timer() -> float:
+    """Freeze the timer and return the final elapsed time."""
+    elapsed = get_current_time()
+    st.session_state.timer_running = False
+    st.session_state.accumulated_time = elapsed
+    st.session_state.start_timestamp = None
+    return elapsed
+
+
+@st.fragment(run_every="100ms")
+def render_live_time():
+    """Refresh the time metric without requiring a board interaction."""
+    st.metric(label="Thời gian (Time)", value=f"{get_current_time():.1f}s")
+
+
 def inject_keyboard_shortcuts():
     """Tiêm script bắt phím tắt (R: Shuffle, S: Save, L: Load, Space: Solve)."""
     js_code = """
@@ -138,8 +153,7 @@ def render_tab_puzzle():
 
     # Kiểm tra thắng lần đầu để dừng bộ đếm thời gian
     if is_game_won and not st.session_state.won_notified:
-        st.session_state.timer_running = False
-        st.session_state.accumulated_time = get_current_time()
+        stop_timer()
         st.session_state.won_notified = True
         st.session_state.status_message = "🎉 CHÚC MỪNG! Bạn đã giải thành công 15-Puzzle!"
 
@@ -185,33 +199,33 @@ def render_tab_puzzle():
                                 key=tile_key,
                                 type="primary" if tile_can_move else "secondary",
                                 help=f"Nhấn để trượt ô {val} vào ô trống" if tile_can_move else None,
+                                # disabled=is_game_won,
                                 use_container_width=True,
                             )
 
-                            if btn_clicked:
-                                if tile_can_move:
-                                    if not st.session_state.timer_running and not is_game_won:
-                                        st.session_state.timer_running = True
-                                        st.session_state.start_timestamp = time.time()
+                            if btn_clicked and not is_game_won and tile_can_move:
+                                if not st.session_state.timer_running:
+                                    st.session_state.timer_running = True
+                                    st.session_state.start_timestamp = time.time()
 
-                                    engine.move(r, c)
-                                    st.session_state.won_notified = False
+                                engine.move(r, c)
+                                st.session_state.won_notified = False
 
-                                    if engine.is_win():
-                                        st.session_state.timer_running = False
-                                        st.session_state.accumulated_time = get_current_time()
-                                        st.session_state.won_notified = True
-                                        st.session_state.status_message = "🎉 CHÚC MỪNG! Bạn đã hoàn thành xuất sắc!"
-                                    else:
-                                        st.session_state.status_message = f"Đã trượt ô số {val} vào ô trống."
-                                    st.rerun()
+                                if engine.is_win():
+                                    stop_timer()
+                                    st.session_state.won_notified = True
+                                    st.session_state.status_message = "🎉 CHÚC MỪNG! Bạn đã hoàn thành xuất sắc!"
+                                else:
+                                    st.session_state.status_message = f"Đã trượt ô số {val} vào ô trống."
+                                st.rerun()
 
         st.write("")
 
         # Khung thẻ thống số: Moves, Time, Status
         m_col1, m_col2, m_col3 = st.columns(3)
         m_col1.metric(label="Bước đi (Moves)", value=engine.board_state.step_count)
-        m_col2.metric(label="Thời gian (Time)", value=f"{elapsed:.1f}s")
+        with m_col2:
+            render_live_time()
         m_col3.metric(
             label="Trạng thái (Status)",
             value="🏆 Thắng cuộc!" if is_game_won else ("▶️ Đang chơi" if st.session_state.timer_running else "⏸️ Tạm dừng"),
@@ -228,6 +242,7 @@ def render_tab_puzzle():
                 col_name, col_submit = st.columns([2, 1])
                 with col_name:
                     player_name = st.text_input("Tên của bạn:", value="Champion", max_chars=20)
+                    player_name = player_name.strip().replace(",", "") or "Anonymous"
                 with col_submit:
                     st.write("")
                     st.write("")
@@ -265,19 +280,25 @@ def render_tab_puzzle():
                 p_col1, p_col2, p_col3 = st.columns(3)
                 with p_col1:
                     if st.button("▶️ Đi 1 bước tiếp", key="btn_next_step", use_container_width=True):
-                        if curr_idx < len(solution):
-                            next_move = solution[curr_idx]
-                            apply_direction_move(engine, next_move)
-                            st.session_state.ai_step_idx += 1
-                            st.rerun()
+                        if is_game_won:
+                            st.toast("Bàn cờ hiện tại đã ở trạng thái giải rồi!", icon="🎯")
+                        else:
+                            if curr_idx < len(solution):
+                                next_move = solution[curr_idx]
+                                apply_direction_move(engine, next_move)
+                                st.session_state.ai_step_idx += 1
+                                st.rerun()
                 with p_col2:
                     if st.button("⏩ Giải toàn bộ", key="btn_solve_all", use_container_width=True):
-                        while st.session_state.ai_step_idx < len(solution):
-                            next_move = solution[st.session_state.ai_step_idx]
-                            apply_direction_move(engine, next_move)
-                            st.session_state.ai_step_idx += 1
-                        st.session_state.status_message = "🎉 AI đã hoàn thành giải toàn bộ bàn cờ!"
-                        st.rerun()
+                        if is_game_won:
+                            st.toast("Bàn cờ hiện tại đã ở trạng thái giải rồi!", icon="🎯")
+                        else:
+                            while st.session_state.ai_step_idx < len(solution):
+                                next_move = solution[st.session_state.ai_step_idx]
+                                apply_direction_move(engine, next_move)
+                                st.session_state.ai_step_idx += 1
+                            st.session_state.status_message = "🎉 AI đã hoàn thành giải toàn bộ bàn cờ!"
+                            st.rerun()
                 with p_col3:
                     if st.button("❌ Hủy lời giải", key="btn_cancel_ai", use_container_width=True):
                         st.session_state.ai_solution = None
@@ -298,17 +319,15 @@ def render_tab_puzzle():
         st.subheader("⚙️ Điều khiển (Controls)", divider="rainbow")
 
         # Tùy chọn thuật toán AI
-        if AStarSolver is not None:
-            algo_labels = ["IDA* (Heuristic Manhattan)", "A* (MinHeap Queue)"]
-            selected_label = st.radio(
-                "Thuật toán AI tự động giải:",
-                options=algo_labels,
-                index=0,
-                horizontal=True,
-            )
-            st.session_state.ai_algorithm = "A*" if "A*" in selected_label else "IDA*"
-        else:
-            st.session_state.ai_algorithm = "IDA*"
+        algo_labels = ["IDA* (Heuristic Manhattan)", "A* (MinHeap Queue)"]
+        selected_label = st.radio(
+            "Thuật toán AI tự động giải:",
+            options=algo_labels,
+            index=0,
+            horizontal=True,
+        )
+        print(f"Selected AI Algorithm: {selected_label}")
+        st.session_state.ai_algorithm = "IDA*" if "IDA*" in selected_label else "A*"
 
         # Khung nút điều khiển chính
         ctrl_1, ctrl_2 = st.columns(2, gap="small")
@@ -366,7 +385,7 @@ def render_tab_puzzle():
                             "algo": algo_name,
                         }
                         st.session_state.status_message = f"AI ({algo_name}) đã tìm thấy lời giải {len(moves)} bước trong {calc_time:.3f}s!"
-                        st.toast(f"Đã tìm thấy {len(moves)} bước giải ({algo_name})!", icon="⚡")
+                        st.toast(f"Đã tìm thấy lời giải {len(moves)} bước ({algo_name})!", icon="⚡")
                         st.rerun()
                     else:
                         st.error("Không tìm thấy lời giải trong thời gian giới hạn hoặc bàn cờ vô nghiệm.")

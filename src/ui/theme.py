@@ -117,7 +117,6 @@ html[data-theme="light"] button[data-testid*="baseButton"] {
     box-shadow: 0 3px 0 #94A3B8, 0 4px 10px rgba(15, 23, 42, 0.1) !important;
     transition: all 0.12s ease !important;
     height: 46px !important;
-    width: 100% !important;
 }
 
 html[data-theme="light"] button p,
@@ -171,8 +170,11 @@ html[data-theme="light"] .stButton > button[kind="primary"] {
     background: linear-gradient(135deg, #0284C7 0%, #0369A1 100%) !important;
     background-color: #0284C7 !important;
     color: #FFFFFF !important;
+    font-size: 0.95rem !important;
+    font-weight: 800 !important;
     border: 2.5px solid #0369A1 !important;
     box-shadow: 0 4px 0 #075985, 0 6px 18px rgba(2, 132, 199, 0.45) !important;
+    height: 68px !important;
     cursor: pointer !important;
 }
 
@@ -318,7 +320,6 @@ html[data-theme="dark"] button[data-testid*="baseButton"],
     box-shadow: 0 3px 0 #0F172A, 0 4px 10px rgba(0, 0, 0, 0.4) !important;
     transition: all 0.12s ease !important;
     height: 46px !important;
-    width: 100% !important;
 }
 
 html[data-theme="dark"] button p,
@@ -383,6 +384,7 @@ html[data-theme="dark"] .stButton > button[kind="primary"],
     color: #FFFFFF !important;
     border: 2.5px solid #38BDF8 !important;
     box-shadow: 0 4px 0 #0369A1, 0 6px 20px rgba(14, 165, 233, 0.6) !important;
+    height: 68px !important;
     cursor: pointer !important;
 }
 
