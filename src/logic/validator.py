@@ -1,19 +1,10 @@
 """Validation helpers for puzzle board states."""
 
-
 from typing import Sequence
-
-
-def count_inversions(state: Sequence[int]) -> int:
-    """Đếm số cặp nghịch thế (inversions) trong dãy số, bỏ qua ô trống (0)."""
-    tiles = [x for x in state if x != 0]
-    n = len(tiles)
-    inversions = 0
-    for i in range(n):
-        for j in range(i + 1, n):
-            if tiles[i] > tiles[j]:
-                inversions += 1
-    return inversions
+from src.algorithms.solvability import (
+    count_inversions,
+    is_solvable as _algo_is_solvable,
+)
 
 
 def check_solvable(grid: list[list[int]] | Sequence[int]) -> bool:
@@ -38,19 +29,8 @@ def check_solvable(grid: list[list[int]] | Sequence[int]) -> bool:
     ):
         raise ValueError("Grid must contain each integer from 0 to N-1 exactly once.")
 
-    blank_index = tiles.index(0)
-    blank_row_from_bottom = len(grid) - blank_index // width
-    inversions = sum(
-        earlier > later
-        for index, earlier in enumerate(tiles)
-        if earlier != 0
-        for later in tiles[index + 1 :]
-        if later != 0
-    )
-
-    if width % 2 == 1:
-        return inversions % 2 == 0
-    return (inversions + blank_row_from_bottom) % 2 == 1
+    # Sử dụng logic toán học chuẩn từ solvability module
+    return _algo_is_solvable(tiles)
 
 
 def is_solvable(state: Sequence[int] | list[list[int]]) -> bool:
@@ -90,4 +70,3 @@ def parse_and_validate_input(raw_input: str) -> tuple[bool, str, list[list[int]]
         return False, f"Lỗi bàn cờ: {e}", None
 
     return True, "Bàn cờ hợp lệ và giải được!", grid
-

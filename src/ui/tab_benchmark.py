@@ -5,7 +5,7 @@ Các tính năng nâng cao:
     - Tích hợp các bộ bàn cờ thử thách độc quyền: IDA* giải thành công trong < 0.2s, còn A* hoàn toàn thất bại (chạm ngưỡng 50,000 nút).
     - Chức năng tự nhập ma trận bàn cờ tùy biến (16 số) để đối đầu.
     - Hiển thị trực quan bàn cờ 4x4 mini theo chuẩn bảng màu C++ Raylib.
-    - So sánh song song: Thời gian (ms), Số nút duyệt, Độ dài bước đi, Biểu đồ trực quan.
+    - So sánh song song: Thời gian (ms), Số nút duyệt thực tế, Độ dài bước đi, Biểu đồ trực quan.
 """
 
 import time
@@ -103,18 +103,18 @@ def execute_benchmark(test_board: tuple[int, ...]):
     """Thực thi đối đầu giữa IDA* và A* trên cùng 1 bàn cờ."""
     with st.spinner("Đang thực thi đối đầu IDA* vs A* (MinHeap)..."):
         # 1. Chạy IDA*
-        ida = IDASolver(weight=2)
+        ida = IDASolver(weight=2.0)
         t0 = time.perf_counter()
         ida_moves = ida.solve(test_board)
-        ida_time = time.perf_counter() - t0
-        ida_nodes = getattr(ida, "nodes_expanded", len(ida_moves) * 15 if ida_moves else 0)
+        ida_time = getattr(ida, "execution_time", time.perf_counter() - t0)
+        ida_nodes = getattr(ida, "nodes_expanded", 0)
 
         # 2. Chạy A*
         if AStarSolver is not None:
             astar = AStarSolver(max_nodes=50000, max_time_seconds=10.0)
             t1 = time.perf_counter()
             astar_moves = astar.solve(test_board)
-            astar_time = time.perf_counter() - t1
+            astar_time = getattr(astar, "execution_time", time.perf_counter() - t1)
             astar_nodes = getattr(astar, "nodes_expanded", 0)
         else:
             astar_moves = []
@@ -147,8 +147,8 @@ def render_tab_benchmark():
     st.markdown(
         """
         Trang đo lường và đánh giá hiệu năng giải thuật trên **cùng một trạng thái bàn cờ**:
-        * **IDA\*:** Weighted IDA* ($f = g + 2h$), cắt tỉa nhánh lùi $d \oplus 1$, bộ nhớ đệ quy $O(d)$ cực nhỏ.
-        * **A\* Search (Nhóm):** Hàng đợi ưu tiên `MinHeap` và bảng băm `HashTable`, giới hạn an toàn 50,000 nút ($O(b^d)$).
+        * **IDA\*:** Weighted IDA* ($f = g + 2h$), cắt tỉa chu trình bằng `HashTable`, bộ nhớ đệ quy $O(d)$ cực nhỏ.
+        * **A\* Search:** Hàng đợi ưu tiên `MinHeap` và bảng băm `HashTable`, giới hạn an toàn 50,000 nút ($O(b^d)$).
         """
     )
 
@@ -280,6 +280,8 @@ def render_tab_benchmark():
                     st.session_state.ai_step_idx = 0
                     st.session_state.ai_auto_playing = False
                     st.session_state.won_notified = False
+                    st.session_state.score_saved = False
+                    st.session_state.saved_record = None
                     st.toast("Đã chuyển bàn cờ sang Tab 1 thành công!", icon="🚀")
 
         # ---------------------------------------------------------------------
@@ -295,9 +297,10 @@ def render_tab_benchmark():
                 st.markdown("##### ⚡ Thuật Toán IDA*")
                 st.metric("Thời gian", f"{ida_res['time'] * 1000:.1f} ms")
                 st.metric("Số bước giải", f"{ida_res['length']} bước")
+                st.metric("Số nút đã duyệt", f"{ida_res['nodes']:,}")
 
                 if ida_res["success"]:
-                    st.success("✅ THÀNH CÔNG! Tìm thấy lời giải tối ưu.")
+                    st.success("✅ THÀNH CÔNG! Đã tìm thấy lời giải.")
                     with st.expander("Xem chi tiết các bước (IDA*)"):
                         st.caption(" ➔ ".join(ida_res["moves"]))
                 else:
@@ -307,6 +310,7 @@ def render_tab_benchmark():
             with c_astar:
                 st.markdown("##### 🌲 Thuật Toán A* (MinHeap Queue)")
                 st.metric("Thời gian", f"{astar_res['time'] * 1000:.1f} ms")
+                st.metric("Số bước giải", f"{astar_res['length']} bước" if astar_res["success"] else "N/A")
                 st.metric("Số nút đã mở rộng", f"{astar_res['nodes']:,}")
 
                 if astar_res["success"]:
@@ -320,7 +324,7 @@ def render_tab_benchmark():
             if ida_res["success"] and not astar_res["success"]:
                 st.success(
                     "🏆 **KẾT LUẬN: IDA* THẮNG TUYỆT ĐỐI!** "
-                    f"IDA* giải xong bài toán {ida_res['length']} bước chỉ trong {ida_res['time']*1000:.1f}ms, "
+                    f"IDA* giải xong bài toán {ida_res['length']} bước chỉ trong {ida_res['time']*1000:.1f}ms (duyệt {ida_res['nodes']:,} nút), "
                     f"trong khi A* bị bùng nổ tổ hợp trạng thái, chạm trần 50,000 nút và thất bại!"
                 )
 
@@ -355,7 +359,7 @@ def render_tab_benchmark():
                 * **Vì sao A\* thất bại trên các bàn cờ sâu?**
                   * Hệ số rẽ nhánh trung bình của 15-Puzzle là $b \\approx 2.13$. Ở độ sâu $d \\ge 30$, không gian trạng thái cần lưu trữ vượt quá hàng trăm triệu nút. Thuật toán A\* phải lưu giữ toàn bộ các nút này trong `MinHeap` và `HashTable` trên RAM, dẫn tới cạn kiệt bộ nhớ hoặc chạm trần an toàn 50,000 nút.
                 * **Vì sao IDA\* chiến thắng áp đảo?**
-                  * **IDA\*** sử dụng cơ chế duyệt sâu lặp lại (*Iterative Deepening*) kết hợp Heuristic có trọng số $f = g + 2h$ và cắt tỉa bước lùi $d \\oplus 1$.
+                  * **IDA\*** sử dụng cơ chế duyệt sâu lặp lại (*Iterative Deepening*) kết hợp Heuristic có trọng số $f = g + 2h$ và cắt tỉa chu trình bằng `HashTable`.
                   * Bộ nhớ chỉ tốn $O(d)$ (ngăn xếp đệ quy vài KB), không bao giờ gặp lỗi tràn RAM, cho phép tìm ra lời giải nhanh chóng ngay cả với độ sâu 40 - 50 bước.
                 """
             )

@@ -6,6 +6,7 @@ Chức năng theo README.md:
     - Lưu trữ Trạng thái ván đấu: File save.dat chụp ảnh snapshot bàn cờ (16 số, số bước, thời gian).
 """
 
+import csv
 import json
 from pathlib import Path
 from src.models.board_state import BoardState
@@ -29,11 +30,20 @@ def save_game(board_state: BoardState, filepath: Path | str = DEFAULT_SAVE_FILE)
     Nội dung bao gồm mảng 16 số, số bước đi và thời gian đã trôi qua.
     """
     path = ensure_data_dir(filepath)
+
+    # Đảm bảo empty_pos chuẩn xác theo vị trí ô số 0 trong grid
+    empty_pos = board_state.empty_pos
+    for r in range(board_state.size):
+        for c in range(len(board_state.grid[r])):
+            if board_state.grid[r][c] == 0:
+                empty_pos = (r, c)
+                break
+
     data = {
         "grid": board_state.grid,
-        "empty_pos": list(board_state.empty_pos),
+        "empty_pos": list(empty_pos),
         "step_count": board_state.step_count,
-        "elapsed_time": board_state.elapsed_time,
+        "elapsed_time": float(board_state.elapsed_time),
     }
     try:
         with open(path, "w", encoding="utf-8") as f:
@@ -58,12 +68,26 @@ def load_game(filepath: Path | str = DEFAULT_SAVE_FILE) -> BoardState | None:
             data = json.load(f)
 
         grid = data["grid"]
-        empty_pos = tuple(data.get("empty_pos", (3, 3)))
+        size = len(grid)
+
+        # Tự động tìm vị trí ô trống 0 trong grid để đảm bảo tính toàn vẹn
+        empty_pos = None
+        for r in range(size):
+            for c in range(len(grid[r])):
+                if grid[r][c] == 0:
+                    empty_pos = (r, c)
+                    break
+            if empty_pos is not None:
+                break
+
+        if empty_pos is None:
+            empty_pos = tuple(data.get("empty_pos", (size - 1, size - 1)))
+
         step_count = data.get("step_count", 0)
         elapsed_time = data.get("elapsed_time", 0.0)
 
         return BoardState(
-            size=len(grid),
+            size=size,
             grid=grid,
             empty_pos=empty_pos,
             step_count=step_count,
@@ -81,7 +105,6 @@ def load_leaderboard(filepath: Path | str = DEFAULT_LEADERBOARD_FILE) -> list[Sc
     """
     path = Path(filepath)
     if not path.is_file():
-        # Trả về dữ liệu mẫu mặc định nếu file chưa có
         default_mock = [
             ScoreRecord(player_name="Antigravity", step_count=38, elapsed_time=15.2),
             ScoreRecord(player_name="Player 1", step_count=45, elapsed_time=18.0),
@@ -92,13 +115,47 @@ def load_leaderboard(filepath: Path | str = DEFAULT_LEADERBOARD_FILE) -> list[Sc
 
     records: list[ScoreRecord] = []
     try:
-        with open(path, "r", encoding="utf-8") as f:
-            for line in f:
-                line = line.strip()
-                if not line or line.startswith("#") or line.startswith("Player"):
+        with open(path, "r", encoding="utf-8", newline="") as f:
+            reader = csv.reader(f)
+            header = next(reader, None)
+
+            # Bỏ qua dòng tiêu đề chuẩn xác (chỉ bỏ qua nếu là header thật)
+            rows_to_process = list(reader)
+            if header:
+                # Nếu dòng đầu tiên không phải header (ví dụ file CSV không có header)
+                is_header = False
+                if len(header) >= 2:
+                    col0 = header[0].strip().lower()
+                    col1 = header[1].strip()
+                    if col0 in ("playername", "player_name", "name") or not col1.isdigit():
+                        is_header = True
+                if not is_header:
+                    rows_to_process.insert(0, header)
+
+            for parts in rows_to_process:
+                if not parts:
+                    continue
+                # Bỏ qua dòng comment
+                if parts[0].strip().startswith("#"):
                     continue
                 try:
-                    records.append(ScoreRecord.from_csv_line(line))
+                    if len(parts) >= 4:
+                        records.append(
+                            ScoreRecord(
+                                player_name=parts[0].strip(),
+                                step_count=int(parts[1].strip()),
+                                elapsed_time=float(parts[2].strip()),
+                                date_played=parts[3].strip(),
+                            )
+                        )
+                    elif len(parts) == 3:
+                        records.append(
+                            ScoreRecord(
+                                player_name=parts[0].strip(),
+                                step_count=int(parts[1].strip()),
+                                elapsed_time=float(parts[2].strip()),
+                            )
+                        )
                 except ValueError:
                     continue
 
@@ -118,10 +175,16 @@ def save_leaderboard(
     records.sort()
     top_10 = records[:10]
     try:
-        with open(path, "w", encoding="utf-8") as f:
-            f.write("PlayerName,StepCount,ElapsedTime,DatePlayed\n")
+        with open(path, "w", encoding="utf-8", newline="") as f:
+            writer = csv.writer(f)
+            writer.writerow(["PlayerName", "StepCount", "ElapsedTime", "DatePlayed"])
             for rec in top_10:
-                f.write(rec.to_csv_line() + "\n")
+                writer.writerow([
+                    rec.player_name,
+                    rec.step_count,
+                    f"{rec.elapsed_time:.2f}",
+                    rec.date_played,
+                ])
         return True
     except Exception as e:
         print(f"Lỗi khi lưu leaderboard vào {path}: {e}")
