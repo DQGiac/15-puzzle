@@ -57,7 +57,7 @@ def test_solvability():
     unsolvable[13], unsolvable[14] = unsolvable[14], unsolvable[13]
     assert check_solvable(unsolvable) is False
 
-    # Trường Vũ test cases
+    # Reverse test cases
     assert check_solvable((0, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1)) is True
     assert check_solvable((15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0)) is False
 
@@ -89,6 +89,19 @@ def test_game_engine():
     assert engine.board_state.empty_pos == (3, 3)
     assert engine.board_state.step_count == 2
     assert engine.is_win() is True
+
+    # Test Undo feature
+    assert engine.can_undo() is True
+    assert engine.undo() is True
+    assert engine.board_state.empty_pos == (2, 3)
+    assert engine.board_state.step_count == 1
+    assert engine.is_win() is False
+    assert engine.undo() is True
+    assert engine.board_state.empty_pos == (3, 3)
+    assert engine.board_state.step_count == 0
+    assert engine.is_win() is True
+    assert engine.can_undo() is False
+    assert engine.undo() is False
 
 
 def test_ida_solver_short():

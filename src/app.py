@@ -8,22 +8,36 @@ if str(ROOT_DIR) not in sys.path:
 
 from src.ui.theme import inject_theme_system
 from src.ui.tab_puzzle import render_tab_puzzle
+from src.ui.tab_benchmark import render_tab_benchmark
+from src.ui.tab_leaderboard import render_tab_leaderboard
 
-# 1. Cấu hình trang (Pure Streamlit API)
+# 1. Cấu hình trang
 st.set_page_config(
-    page_title="15-Puzzle Game",
+    page_title="15-Puzzle Game & AI Solver",
     page_icon="🧩",
     layout="wide",
     initial_sidebar_state="collapsed",
 )
 
-# 2. Khởi tạo hệ thống Theme và nút Toggle Circular Reveal
+# 2. Khởi tạo CSS và Theme tối ưu
 inject_theme_system()
 
-# 3. Tiêu đề ứng dụng bão hòa cao, tương phản sắc nét trong cả Light & Dark
-st.markdown('<div class="app-title-gradient">🧩 15-Puzzle Game</div>', unsafe_allow_html=True)
-st.caption("Trò chơi trượt ô số 4x4 kinh điển với giải thuật AI thông minh (IDA*) và bảng xếp hạng Top 10")
+# 3. Tiêu đề ứng dụng
+st.markdown('<div class="app-title-gradient">🧩 15-Puzzle Game & AI Solver</div>', unsafe_allow_html=True)
+st.caption("Ứng dụng trượt ô số 4x4 kinh điển kết hợp AI tối ưu (IDA* vs A*) và Bảng xếp hạng Top 10")
 
-# 4. Hiển thị giao diện chính của 15-Puzzle
-render_tab_puzzle()
+# 4. Hệ thống Tab điều hướng chuyên nghiệp
+tab_game, tab_bench, tab_board = st.tabs([
+    "🎮 Bàn Cờ & AI Solver",
+    "📊 So Sánh Thuật Toán (IDA* vs A*)",
+    "🏆 Bảng Xếp Hạng & Lưu Trữ",
+])
 
+with tab_game:
+    render_tab_puzzle()
+
+with tab_bench:
+    render_tab_benchmark()
+
+with tab_board:
+    render_tab_leaderboard()
