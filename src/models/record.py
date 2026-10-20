@@ -14,7 +14,7 @@ class ScoreRecord:
     date_played: str = field(
         default_factory=lambda: datetime.now()
         .astimezone()
-        .isoformat(timespec="seconds")
+        .strftime("%Y/%m/%d %H:%M:%S")
     )
 
     def __lt__(self, other: "ScoreRecord") -> bool:
