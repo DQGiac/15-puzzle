@@ -25,7 +25,7 @@ def render_tab_leaderboard():
     init_session_state()
     st.subheader("🏆 Bảng Xếp Hạng Top 10 & Quản Lý Dữ Liệu", divider="rainbow")
 
-    col_lead, col_save = st.columns([1.2, 1], gap="large")
+    col_lead, col_save = st.columns([1.25, 1], gap="large")
 
     # -------------------------------------------------------------------------
     # CỘT TRÁI: BẢNG XẾP HẠNG TOP 10
@@ -45,10 +45,10 @@ def render_tab_leaderboard():
                 rows_html += f"""
                 <tr class="{row_cls}">
                     <td style="font-weight: 800;">{rank_str}</td>
-                    <td><strong>{rec.player_name}</strong></td>
+                    <td><strong style="color: #FFFFFF;">{rec.player_name}</strong></td>
                     <td><span class="badge-steps">{rec.step_count}</span></td>
-                    <td style="font-weight: 700;">{rec.elapsed_time:.1f}s</td>
-                    <td style="opacity: 0.8; font-size: 0.85rem;">{rec.date_played}</td>
+                    <td><span style="color: #A6E3A1; font-weight: 800; font-family: monospace;">{rec.elapsed_time:.1f}s</span></td>
+                    <td style="opacity: 0.75; font-size: 0.85rem; font-family: monospace;">{rec.date_played}</td>
                 </tr>
                 """
 
@@ -57,8 +57,8 @@ def render_tab_leaderboard():
                 <table class="leaderboard-table">
                     <thead>
                         <tr>
-                            <th style="width: 18%;">Thứ hạng</th>
-                            <th style="width: 32%;">Người chơi</th>
+                            <th style="width: 20%;">Thứ hạng</th>
+                            <th style="width: 30%;">Người chơi</th>
                             <th style="width: 18%;">Số bước</th>
                             <th style="width: 16%;">Thời gian</th>
                             <th style="width: 16%;">Ngày</th>
@@ -104,12 +104,24 @@ def render_tab_leaderboard():
         engine: GameEngine = st.session_state.game_engine
 
         with st.container(border=True):
-            st.write("#### 🎮 Trạng thái hiện tại trên bàn cờ:")
-            st.markdown(
-                f"- **Số bước đã đi:** `{engine.board_state.step_count}`\n"
-                f"- **Thời gian đã chơi:** `{engine.board_state.elapsed_time:.1f}s`\n"
-                f"- **Vị trí ô trống:** `{engine.board_state.empty_pos}`"
-            )
+            st.write("#### 🎮 Trạng thái snapshot bàn cờ:")
+            status_chips_html = f"""
+            <div class="bench-stats-grid">
+                <div class="bench-stat-chip">
+                    <span class="chip-label">Số bước đi</span>
+                    <span class="chip-val">{engine.board_state.step_count}</span>
+                </div>
+                <div class="bench-stat-chip">
+                    <span class="chip-label">Thời gian</span>
+                    <span class="chip-val">{engine.board_state.elapsed_time:.1f}s</span>
+                </div>
+                <div class="bench-stat-chip">
+                    <span class="chip-label">Ô trống (r, c)</span>
+                    <span class="chip-val">[{engine.board_state.empty_pos[0]}, {engine.board_state.empty_pos[1]}]</span>
+                </div>
+            </div>
+            """
+            st.markdown(status_chips_html, unsafe_allow_html=True)
 
             c_save, c_load = st.columns(2, gap="small")
             with c_save:

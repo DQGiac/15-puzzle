@@ -22,9 +22,22 @@ st.set_page_config(
 # 2. Khởi tạo CSS và Theme tối ưu
 inject_theme_system()
 
-# 3. Tiêu đề ứng dụng
-st.markdown('<div class="app-title-gradient">🧩 15-Puzzle Game & AI Solver</div>', unsafe_allow_html=True)
-st.caption("Ứng dụng trượt ô số 4x4 kinh điển kết hợp AI tối ưu (IDA* vs A*) và Bảng xếp hạng Top 10")
+# 3. Hero Header Banner hiện đại
+hero_html = """
+<div class="hero-header-card">
+    <div class="hero-title-area">
+        <h1 class="app-title-gradient">🧩 15-Puzzle Game & AI Solver</h1>
+        <p class="hero-subtitle">Trò chơi trượt ô số 4×4 kinh điển chuẩn C++ Raylib • Tích hợp AI đối đầu IDA* vs A*</p>
+    </div>
+    <div class="hero-badges-group">
+        <span class="tech-pill accent-blue">⚡ IDA* Heuristic</span>
+        <span class="tech-pill accent-purple">🌲 A* MinHeap</span>
+        <span class="tech-pill accent-gold">🏆 Top 10 Records</span>
+        <span class="tech-pill">🎮 C++ Raylib Engine</span>
+    </div>
+</div>
+"""
+st.markdown(hero_html, unsafe_allow_html=True)
 
 # 4. Hệ thống Tab điều hướng chuyên nghiệp
 tab_game, tab_bench, tab_board = st.tabs([

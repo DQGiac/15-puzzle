@@ -253,13 +253,23 @@ def render_tab_benchmark():
             inv_count = count_inversions(list(board_tuple))
             empty_idx = board_tuple.index(0)
 
-            st.markdown(
-                f"""
-                - **Khoảng cách Manhattan ($h_0$):** `{h_init}`
-                - **Số cặp nghịch thế ($N_{{inv}}$):** `{inv_count}`
-                - **Tọa độ ô trống:** `Hàng {empty_idx // 4 + 1}, Cột {empty_idx % 4 + 1}`
-                """
-            )
+            stats_html = f"""
+            <div class="bench-stats-grid">
+                <div class="bench-stat-chip">
+                    <span class="chip-label">Manhattan (h₀)</span>
+                    <span class="chip-val">{h_init}</span>
+                </div>
+                <div class="bench-stat-chip">
+                    <span class="chip-label">Nghịch thế (N_inv)</span>
+                    <span class="chip-val">{inv_count}</span>
+                </div>
+                <div class="bench-stat-chip">
+                    <span class="chip-label">Ô trống (r, c)</span>
+                    <span class="chip-val">[{empty_idx // 4 + 1}, {empty_idx % 4 + 1}]</span>
+                </div>
+            </div>
+            """
+            st.markdown(stats_html, unsafe_allow_html=True)
 
             # Nút chuyển bàn cờ sang Tab 1 để xem AI trượt từng bước
             if st.button("🎮 Đưa bàn cờ này sang Tab 1 để xem AI trượt", use_container_width=True):
@@ -294,31 +304,35 @@ def render_tab_benchmark():
 
             # Cột IDA*
             with c_ida:
-                st.markdown("##### ⚡ Thuật Toán IDA*")
-                st.metric("Thời gian", f"{ida_res['time'] * 1000:.1f} ms")
-                st.metric("Số bước giải", f"{ida_res['length']} bước")
-                st.metric("Số nút đã duyệt", f"{ida_res['nodes']:,}")
+                with st.container(border=True):
+                    st.markdown('<span class="tech-pill accent-blue">⚡ IDA* (Heuristic Weighted w=2)</span>', unsafe_allow_html=True)
+                    st.write("")
+                    st.metric("Thời gian", f"{ida_res['time'] * 1000:.1f} ms")
+                    st.metric("Số bước giải", f"{ida_res['length']} bước")
+                    st.metric("Số nút đã duyệt", f"{ida_res['nodes']:,}")
 
-                if ida_res["success"]:
-                    st.success("✅ THÀNH CÔNG! Đã tìm thấy lời giải.")
-                    with st.expander("Xem chi tiết các bước (IDA*)"):
-                        st.caption(" ➔ ".join(ida_res["moves"]))
-                else:
-                    st.error("❌ Không giải được trong thời gian giới hạn.")
+                    if ida_res["success"]:
+                        st.success("✅ THÀNH CÔNG! Đã tìm thấy lời giải.")
+                        with st.expander("Xem chi tiết các bước (IDA*)"):
+                            st.caption(" ➔ ".join(ida_res["moves"]))
+                    else:
+                        st.error("❌ Không giải được trong thời gian giới hạn.")
 
             # Cột A*
             with c_astar:
-                st.markdown("##### 🌲 Thuật Toán A* (MinHeap Queue)")
-                st.metric("Thời gian", f"{astar_res['time'] * 1000:.1f} ms")
-                st.metric("Số bước giải", f"{astar_res['length']} bước" if astar_res["success"] else "N/A")
-                st.metric("Số nút đã mở rộng", f"{astar_res['nodes']:,}")
+                with st.container(border=True):
+                    st.markdown('<span class="tech-pill accent-purple">🌲 A* Search (MinHeap Queue)</span>', unsafe_allow_html=True)
+                    st.write("")
+                    st.metric("Thời gian", f"{astar_res['time'] * 1000:.1f} ms")
+                    st.metric("Số bước giải", f"{astar_res['length']} bước" if astar_res["success"] else "N/A")
+                    st.metric("Số nút đã mở rộng", f"{astar_res['nodes']:,}")
 
-                if astar_res["success"]:
-                    st.success(f"✅ THÀNH CÔNG! {astar_res['length']} bước.")
-                    with st.expander("Xem chi tiết các bước (A*)"):
-                        st.caption(" ➔ ".join(astar_res["moves"]))
-                else:
-                    st.error("❌ THẤT BẠI! Cạn kiệt 50,000 nút (Out of Memory/Budget).")
+                    if astar_res["success"]:
+                        st.success(f"✅ THÀNH CÔNG! {astar_res['length']} bước.")
+                        with st.expander("Xem chi tiết các bước (A*)"):
+                            st.caption(" ➔ ".join(astar_res["moves"]))
+                    else:
+                        st.error("❌ THẤT BẠI! Cạn kiệt 50,000 nút (Out of Memory/Budget).")
 
             # Banner tổng kết nếu IDA* thắng và A* thua
             if ida_res["success"] and not astar_res["success"]:
