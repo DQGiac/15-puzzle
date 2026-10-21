@@ -235,30 +235,122 @@ html[data-theme="light"] [data-testid="stAlert"] {
     font-weight: 600 !important;
 }
 
+/* EXPANDER TRONG LIGHT THEME */
 html[data-theme="light"] [data-testid="stExpander"],
+html[data-theme="light"] .stExpander,
 html[data-theme="light"] div[data-testid="stVerticalBlockBorderWrapper"] {
     background-color: #FFFFFF !important;
+    background: #FFFFFF !important;
+    border: 2px solid #CBD5E1 !important;
+    border-radius: 14px !important;
+    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06) !important;
+    overflow: hidden !important;
+}
+
+html[data-theme="light"] [data-testid="stExpander"] details,
+html[data-theme="light"] .stExpander details {
+    border: none !important;
+    background-color: #FFFFFF !important;
+    border-radius: 14px !important;
+}
+
+html[data-theme="light"] [data-testid="stExpander"] summary,
+html[data-theme="light"] .stExpander summary {
+    background-color: #F1F5F9 !important;
+    background: #F1F5F9 !important;
+    color: #0F172A !important;
+    font-weight: 800 !important;
+    border-radius: 12px 12px 0 0 !important;
+    transition: background-color 0.15s ease !important;
+}
+
+html[data-theme="light"] [data-testid="stExpander"] summary:hover,
+html[data-theme="light"] .stExpander summary:hover {
+    background-color: #E2E8F0 !important;
+}
+
+html[data-theme="light"] [data-testid="stExpander"] summary p,
+html[data-theme="light"] [data-testid="stExpander"] summary span,
+html[data-theme="light"] [data-testid="stExpander"] summary div,
+html[data-theme="light"] .stExpander summary p,
+html[data-theme="light"] .stExpander summary span,
+html[data-theme="light"] .stExpander summary div {
+    color: #0F172A !important;
+    font-weight: 800 !important;
+}
+
+html[data-theme="light"] [data-testid="stExpander"] summary svg,
+html[data-theme="light"] .stExpander summary svg {
+    fill: #0F172A !important;
+    stroke: #0F172A !important;
+    color: #0F172A !important;
+}
+
+html[data-theme="light"] [data-testid="stExpanderDetails"],
+html[data-theme="light"] .stExpanderDetails {
+    background-color: #FFFFFF !important;
+    color: #0F172A !important;
+    border-top: 1.5px solid #E2E8F0 !important;
+}
+
+/* TEXT AREA & INPUT TRONG LIGHT THEME */
+html[data-theme="light"] [data-testid="stTextArea"],
+html[data-theme="light"] .stTextArea,
+html[data-theme="light"] [data-testid="stTextInput"],
+html[data-theme="light"] .stTextInput {
+    color: #0F172A !important;
+}
+
+html[data-theme="light"] [data-testid="stTextArea"] label,
+html[data-theme="light"] .stTextArea label,
+html[data-theme="light"] [data-testid="stTextInput"] label,
+html[data-theme="light"] .stTextInput label,
+html[data-theme="light"] [data-testid="stWidgetLabel"] p {
+    color: #0F172A !important;
+    font-weight: 700 !important;
+}
+
+html[data-theme="light"] [data-testid="stTextAreaRootElement"],
+html[data-theme="light"] .stTextAreaRootElement,
+html[data-theme="light"] [data-testid="stTextInputRootElement"],
+html[data-theme="light"] .stTextInputRootElement,
+html[data-theme="light"] [data-baseweb="textarea"],
+html[data-theme="light"] [data-baseweb="input"] {
+    background-color: #F8FAFC !important;
+    background: #F8FAFC !important;
     border: 2px solid #CBD5E1 !important;
     border-radius: 12px !important;
-    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06) !important;
+    color: #0F172A !important;
+    box-shadow: inset 0 2px 4px rgba(15, 23, 42, 0.04) !important;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease !important;
 }
 
-html[data-theme="light"] [data-testid="stExpander"] summary {
-    font-weight: 700 !important;
-    color: #0F172A !important;
+html[data-theme="light"] [data-testid="stTextAreaRootElement"]:focus-within,
+html[data-theme="light"] [data-testid="stTextInputRootElement"]:focus-within {
+    border-color: #0284C7 !important;
+    box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.2) !important;
 }
 
-html[data-theme="light"] [data-baseweb="textarea"] {
-    background-color: #F8FAFC !important;
-    border: 2px solid #CBD5E1 !important;
-    border-radius: 10px !important;
+html[data-theme="light"] [data-testid="stTextAreaRootElement"] textarea,
+html[data-theme="light"] .stTextAreaRootElement textarea,
+html[data-theme="light"] [data-testid="stTextArea"] textarea,
+html[data-theme="light"] .stTextArea textarea,
+html[data-theme="light"] [data-testid="stTextInput"] input,
+html[data-theme="light"] .stTextInput input,
+html[data-theme="light"] [data-baseweb="textarea"] textarea,
+html[data-theme="light"] textarea {
     color: #0F172A !important;
-}
-
-html[data-theme="light"] [data-baseweb="textarea"] textarea {
-    color: #0F172A !important;
+    background-color: transparent !important;
+    font-size: 0.95rem !important;
     font-weight: 600 !important;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
 }
+
+html[data-theme="light"] [data-testid="stTextAreaRootElement"] textarea::placeholder,
+html[data-theme="light"] [data-testid="stTextInputRootElement"] input::placeholder {
+    color: #94A3B8 !important;
+}
+
 
 /* THÔNG BÁO (TOAST NOTIFICATIONS) TRONG LIGHT THEME */
 html[data-theme="light"] [data-testid="stToast"],
@@ -540,32 +632,136 @@ html[data-theme="dark"] [data-testid="stAlert"],
 
 html[data-theme="dark"] [data-testid="stExpander"],
 html[data-theme="dark"] div[data-testid="stVerticalBlockBorderWrapper"],
-:root:not([data-theme="light"]) [data-testid="stExpander"] {
+/* EXPANDER TRONG DARK THEME */
+html[data-theme="dark"] [data-testid="stExpander"],
+html[data-theme="dark"] .stExpander,
+html[data-theme="dark"] div[data-testid="stVerticalBlockBorderWrapper"],
+:root:not([data-theme="light"]) [data-testid="stExpander"],
+:root:not([data-theme="light"]) .stExpander {
     background-color: #1E293B !important;
+    background: #1E293B !important;
     border: 2px solid #334155 !important;
-    border-radius: 12px !important;
+    border-radius: 14px !important;
     box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45) !important;
+    overflow: hidden !important;
+}
+
+html[data-theme="dark"] [data-testid="stExpander"] details,
+html[data-theme="dark"] .stExpander details,
+:root:not([data-theme="light"]) [data-testid="stExpander"] details {
+    border: none !important;
+    background-color: #1E293B !important;
+    border-radius: 14px !important;
 }
 
 html[data-theme="dark"] [data-testid="stExpander"] summary,
+html[data-theme="dark"] .stExpander summary,
 :root:not([data-theme="light"]) [data-testid="stExpander"] summary {
+    background-color: #0F172A !important;
+    background: #0F172A !important;
+    color: #F8FAFC !important;
+    font-weight: 800 !important;
+    border-radius: 12px 12px 0 0 !important;
+    transition: background-color 0.15s ease !important;
+}
+
+html[data-theme="dark"] [data-testid="stExpander"] summary:hover,
+html[data-theme="dark"] .stExpander summary:hover,
+:root:not([data-theme="light"]) [data-testid="stExpander"] summary:hover {
+    background-color: #1E293B !important;
+}
+
+html[data-theme="dark"] [data-testid="stExpander"] summary p,
+html[data-theme="dark"] [data-testid="stExpander"] summary span,
+html[data-theme="dark"] [data-testid="stExpander"] summary div,
+:root:not([data-theme="light"]) [data-testid="stExpander"] summary p,
+:root:not([data-theme="light"]) [data-testid="stExpander"] summary span,
+:root:not([data-theme="light"]) [data-testid="stExpander"] summary div {
+    color: #F8FAFC !important;
+    font-weight: 800 !important;
+}
+
+html[data-theme="dark"] [data-testid="stExpander"] summary svg,
+html[data-theme="dark"] .stExpander summary svg,
+:root:not([data-theme="light"]) [data-testid="stExpander"] summary svg {
+    fill: #F8FAFC !important;
+    stroke: #F8FAFC !important;
+    color: #F8FAFC !important;
+}
+
+html[data-theme="dark"] [data-testid="stExpanderDetails"],
+html[data-theme="dark"] .stExpanderDetails,
+:root:not([data-theme="light"]) [data-testid="stExpanderDetails"] {
+    background-color: #1E293B !important;
+    color: #F8FAFC !important;
+    border-top: 1.5px solid #334155 !important;
+}
+
+/* TEXT AREA & INPUT TRONG DARK THEME */
+html[data-theme="dark"] [data-testid="stTextArea"],
+html[data-theme="dark"] .stTextArea,
+html[data-theme="dark"] [data-testid="stTextInput"],
+html[data-theme="dark"] .stTextInput,
+:root:not([data-theme="light"]) [data-testid="stTextArea"],
+:root:not([data-theme="light"]) .stTextInput {
+    color: #F8FAFC !important;
+}
+
+html[data-theme="dark"] [data-testid="stTextArea"] label,
+html[data-theme="dark"] .stTextArea label,
+html[data-theme="dark"] [data-testid="stTextInput"] label,
+html[data-theme="dark"] .stTextInput label,
+:root:not([data-theme="light"]) [data-testid="stWidgetLabel"] p {
+    color: #F8FAFC !important;
     font-weight: 700 !important;
-    color: #F8FAFC !important;
 }
 
+html[data-theme="dark"] [data-testid="stTextAreaRootElement"],
+html[data-theme="dark"] .stTextAreaRootElement,
+html[data-theme="dark"] [data-testid="stTextInputRootElement"],
+html[data-theme="dark"] .stTextInputRootElement,
 html[data-theme="dark"] [data-baseweb="textarea"],
-:root:not([data-theme="light"]) [data-baseweb="textarea"] {
+html[data-theme="dark"] [data-baseweb="input"],
+:root:not([data-theme="light"]) [data-testid="stTextAreaRootElement"],
+:root:not([data-theme="light"]) [data-testid="stTextInputRootElement"] {
     background-color: #0B0F19 !important;
+    background: #0B0F19 !important;
     border: 2px solid #334155 !important;
-    border-radius: 10px !important;
+    border-radius: 12px !important;
     color: #F8FAFC !important;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.4) !important;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease !important;
 }
 
-html[data-theme="dark"] [data-baseweb="textarea"] textarea,
-:root:not([data-theme="light"]) [data-baseweb="textarea"] textarea {
-    color: #F8FAFC !important;
-    font-weight: 600 !important;
+html[data-theme="dark"] [data-testid="stTextAreaRootElement"]:focus-within,
+html[data-theme="dark"] [data-testid="stTextInputRootElement"]:focus-within,
+:root:not([data-theme="light"]) [data-testid="stTextAreaRootElement"]:focus-within {
+    border-color: #38BDF8 !important;
+    box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.25) !important;
 }
+
+html[data-theme="dark"] [data-testid="stTextAreaRootElement"] textarea,
+html[data-theme="dark"] .stTextAreaRootElement textarea,
+html[data-theme="dark"] [data-testid="stTextArea"] textarea,
+html[data-theme="dark"] .stTextArea textarea,
+html[data-theme="dark"] [data-testid="stTextInput"] input,
+html[data-theme="dark"] .stTextInput input,
+html[data-theme="dark"] [data-baseweb="textarea"] textarea,
+:root:not([data-theme="light"]) [data-testid="stTextAreaRootElement"] textarea,
+:root:not([data-theme="light"]) [data-testid="stTextArea"] textarea {
+    color: #F8FAFC !important;
+    background-color: transparent !important;
+    font-size: 0.95rem !important;
+    font-weight: 600 !important;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
+}
+
+html[data-theme="dark"] [data-testid="stTextAreaRootElement"] textarea::placeholder,
+html[data-theme="dark"] [data-testid="stTextInputRootElement"] input::placeholder,
+:root:not([data-theme="light"]) [data-testid="stTextAreaRootElement"] textarea::placeholder {
+    color: #64748B !important;
+}
+
 
 /* THÔNG BÁO (TOAST NOTIFICATIONS) TRONG DARK THEME */
 html[data-theme="dark"] [data-testid="stToast"],
