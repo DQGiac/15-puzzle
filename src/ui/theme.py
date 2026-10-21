@@ -102,10 +102,8 @@ html[data-theme="light"] small {
 }
 
 /* TẤT CẢ CÁC NÚT BẤM (BUTTONS) TRONG LIGHT THEME */
-html[data-theme="light"] button,
 html[data-theme="light"] .stButton > button,
 html[data-theme="light"] button[kind="secondary"],
-html[data-theme="light"] button[data-testid*="Button"],
 html[data-theme="light"] button[data-testid*="baseButton"] {
     background: #FFFFFF !important;
     background-color: #FFFFFF !important;
@@ -262,6 +260,97 @@ html[data-theme="light"] [data-baseweb="textarea"] textarea {
     font-weight: 600 !important;
 }
 
+/* THÔNG BÁO (TOAST NOTIFICATIONS) TRONG LIGHT THEME */
+html[data-theme="light"] [data-testid="stToast"],
+html[data-theme="light"] .stToast,
+html[data-theme="light"] .react-aria-Toast {
+    background-color: #FFFFFF !important;
+    background: #FFFFFF !important;
+    color: #0F172A !important;
+    border: 2px solid #CBD5E1 !important;
+    border-radius: 14px !important;
+    box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.15), 0 8px 10px -6px rgba(15, 23, 42, 0.1) !important;
+}
+
+html[data-theme="light"] [data-testid="stToast"] p,
+html[data-theme="light"] [data-testid="stToast"] span,
+html[data-theme="light"] [data-testid="stToast"] div,
+html[data-theme="light"] [data-testid="stToastText"],
+html[data-theme="light"] [data-testid="stToastText"] p,
+html[data-theme="light"] .stToast p,
+html[data-theme="light"] .stToast span,
+html[data-theme="light"] .react-aria-Toast p,
+html[data-theme="light"] .react-aria-Toast span {
+    color: #0F172A !important;
+    font-weight: 700 !important;
+}
+
+html[data-theme="light"] [data-testid="stToast"] button,
+html[data-theme="light"] .stToast button,
+html[data-theme="light"] .react-aria-Toast button,
+html[data-theme="light"] [data-testid="stToast"] button[aria-label="Close"],
+html[data-theme="light"] button[slot="close"] {
+    background: transparent !important;
+    background-color: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    height: 28px !important;
+    width: 28px !important;
+    min-height: unset !important;
+    min-width: unset !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    color: #64748B !important;
+    border-radius: 6px !important;
+    cursor: pointer !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    transform: none !important;
+}
+
+html[data-theme="light"] [data-testid="stToast"] button:hover,
+html[data-theme="light"] .stToast button:hover,
+html[data-theme="light"] .react-aria-Toast button:hover {
+    background-color: #F1F5F9 !important;
+    color: #0F172A !important;
+    border: none !important;
+    box-shadow: none !important;
+    transform: none !important;
+}
+
+html[data-theme="light"] [data-testid="stToast"] button svg,
+html[data-theme="light"] .stToast button svg {
+    fill: currentColor !important;
+    stroke: currentColor !important;
+    width: 16px !important;
+    height: 16px !important;
+}
+
+/* TOOLTIP TRONG LIGHT THEME */
+html[data-theme="light"] [data-testid="stTooltipContent"],
+html[data-theme="light"] .stTooltipContent,
+html[data-theme="light"] .react-aria-Tooltip,
+html[data-theme="light"] div[role="tooltip"] {
+    background-color: #0F172A !important;
+    color: #F8FAFC !important;
+    border: 1px solid #334155 !important;
+    border-radius: 8px !important;
+    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.25) !important;
+    font-weight: 600 !important;
+}
+
+html[data-theme="light"] [data-testid="stTooltipContent"] p,
+html[data-theme="light"] [data-testid="stTooltipContent"] span,
+html[data-theme="light"] [data-testid="stTooltipContent"] div,
+html[data-theme="light"] .stTooltipContent p,
+html[data-theme="light"] .react-aria-Tooltip p,
+html[data-theme="light"] div[role="tooltip"] p {
+    color: #F8FAFC !important;
+    font-weight: 600 !important;
+}
+
+
 /* ==========================================================================
    5. DARK THEME STYLES (html[data-theme="dark"] hoặc mặc định)
    ========================================================================== */
@@ -303,12 +392,9 @@ html[data-theme="dark"] small,
 }
 
 /* TẤT CẢ CÁC NÚT BẤM (BUTTONS) TRONG DARK THEME */
-html[data-theme="dark"] button,
 html[data-theme="dark"] .stButton > button,
 html[data-theme="dark"] button[kind="secondary"],
-html[data-theme="dark"] button[data-testid*="Button"],
 html[data-theme="dark"] button[data-testid*="baseButton"],
-:root:not([data-theme="light"]) button,
 :root:not([data-theme="light"]) .stButton > button {
     background: #1E293B !important;
     background-color: #1E293B !important;
@@ -480,6 +566,110 @@ html[data-theme="dark"] [data-baseweb="textarea"] textarea,
     color: #F8FAFC !important;
     font-weight: 600 !important;
 }
+
+/* THÔNG BÁO (TOAST NOTIFICATIONS) TRONG DARK THEME */
+html[data-theme="dark"] [data-testid="stToast"],
+html[data-theme="dark"] .stToast,
+html[data-theme="dark"] .react-aria-Toast,
+:root:not([data-theme="light"]) [data-testid="stToast"],
+:root:not([data-theme="light"]) .stToast,
+:root:not([data-theme="light"]) .react-aria-Toast {
+    background-color: #1E293B !important;
+    background: #1E293B !important;
+    color: #F8FAFC !important;
+    border: 2px solid #334155 !important;
+    border-radius: 14px !important;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5) !important;
+}
+
+html[data-theme="dark"] [data-testid="stToast"] p,
+html[data-theme="dark"] [data-testid="stToast"] span,
+html[data-theme="dark"] [data-testid="stToast"] div,
+html[data-theme="dark"] [data-testid="stToastText"],
+html[data-theme="dark"] [data-testid="stToastText"] p,
+html[data-theme="dark"] .stToast p,
+html[data-theme="dark"] .stToast span,
+html[data-theme="dark"] .react-aria-Toast p,
+html[data-theme="dark"] .react-aria-Toast span,
+:root:not([data-theme="light"]) [data-testid="stToast"] p,
+:root:not([data-theme="light"]) [data-testid="stToast"] span,
+:root:not([data-theme="light"]) [data-testid="stToast"] div,
+:root:not([data-theme="light"]) [data-testid="stToastText"],
+:root:not([data-theme="light"]) [data-testid="stToastText"] p {
+    color: #F8FAFC !important;
+    font-weight: 700 !important;
+}
+
+html[data-theme="dark"] [data-testid="stToast"] button,
+html[data-theme="dark"] .stToast button,
+html[data-theme="dark"] .react-aria-Toast button,
+:root:not([data-theme="light"]) [data-testid="stToast"] button,
+:root:not([data-theme="light"]) .stToast button,
+:root:not([data-theme="light"]) .react-aria-Toast button {
+    background: transparent !important;
+    background-color: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    height: 28px !important;
+    width: 28px !important;
+    min-height: unset !important;
+    min-width: unset !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    color: #94A3B8 !important;
+    border-radius: 6px !important;
+    cursor: pointer !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    transform: none !important;
+}
+
+html[data-theme="dark"] [data-testid="stToast"] button:hover,
+html[data-theme="dark"] .stToast button:hover,
+:root:not([data-theme="light"]) [data-testid="stToast"] button:hover {
+    background-color: #334155 !important;
+    color: #F8FAFC !important;
+    border: none !important;
+    box-shadow: none !important;
+    transform: none !important;
+}
+
+html[data-theme="dark"] [data-testid="stToast"] button svg,
+html[data-theme="dark"] .stToast button svg,
+:root:not([data-theme="light"]) [data-testid="stToast"] button svg {
+    fill: currentColor !important;
+    stroke: currentColor !important;
+    width: 16px !important;
+    height: 16px !important;
+}
+
+/* TOOLTIP TRONG DARK THEME */
+html[data-theme="dark"] [data-testid="stTooltipContent"],
+html[data-theme="dark"] .stTooltipContent,
+html[data-theme="dark"] .react-aria-Tooltip,
+html[data-theme="dark"] div[role="tooltip"],
+:root:not([data-theme="light"]) [data-testid="stTooltipContent"],
+:root:not([data-theme="light"]) .stTooltipContent,
+:root:not([data-theme="light"]) div[role="tooltip"] {
+    background-color: #0F172A !important;
+    color: #F8FAFC !important;
+    border: 1px solid #334155 !important;
+    border-radius: 8px !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5) !important;
+    font-weight: 600 !important;
+}
+
+html[data-theme="dark"] [data-testid="stTooltipContent"] p,
+html[data-theme="dark"] [data-testid="stTooltipContent"] span,
+html[data-theme="dark"] [data-testid="stTooltipContent"] div,
+:root:not([data-theme="light"]) [data-testid="stTooltipContent"] p,
+:root:not([data-theme="light"]) [data-testid="stTooltipContent"] span,
+:root:not([data-theme="light"]) [data-testid="stTooltipContent"] div {
+    color: #F8FAFC !important;
+    font-weight: 600 !important;
+}
+
 
 /* ==========================================================================
    6. BẢNG XẾP HẠNG TOP 10 (LEADERBOARD HTML TABLE)
