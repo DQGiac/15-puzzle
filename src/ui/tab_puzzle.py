@@ -177,14 +177,18 @@ def inject_cpp_board_styler_and_shortcuts():
 
             if (boardContainer && !boardContainer.__raylib_styled) {
                 boardContainer.__raylib_styled = true;
+                boardContainer.classList.add('c-raylib-board-container');
                 boardContainer.style.setProperty('max-width', '420px', 'important');
                 boardContainer.style.setProperty('margin', '0 auto 12px auto', 'important');
-                boardContainer.style.setProperty('background', '#1E1E2E', 'important');
-                boardContainer.style.setProperty('border', '2px solid #313244', 'important');
                 boardContainer.style.setProperty('border-radius', '18px', 'important');
                 boardContainer.style.setProperty('padding', '14px', 'important');
-                boardContainer.style.setProperty('box-shadow', '0 12px 30px rgba(0,0,0,0.55)', 'important');
                 boardContainer.style.setProperty('box-sizing', 'border-box', 'important');
+            }
+            if (boardContainer) {
+                const isLight = doc.documentElement.getAttribute('data-theme') === 'light';
+                boardContainer.style.setProperty('background', isLight ? '#FFFFFF' : '#1E1E2E', 'important');
+                boardContainer.style.setProperty('border', isLight ? '2px solid #CBD5E1' : '2px solid #313244', 'important');
+                boardContainer.style.setProperty('box-shadow', isLight ? '0 8px 24px rgba(15, 23, 42, 0.08)' : '0 12px 30px rgba(0,0,0,0.55)', 'important');
             }
 
             // Đo độ rộng thực tế của một ô trên màn hình (để ép chiều cao = chiều rộng)
@@ -248,11 +252,12 @@ def inject_cpp_board_styler_and_shortcuts():
                     btn.style.setProperty('font-weight', '900', 'important');
                     btn.style.setProperty('box-shadow', '0 4px 8px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.3)', 'important');
                 } else {
-                    btn.style.setProperty('background', '#181825', 'important');
-                    btn.style.setProperty('background-color', '#181825', 'important');
-                    btn.style.setProperty('border', '2px dashed #313244', 'important');
-                    btn.style.setProperty('opacity', '0.35', 'important');
-                    btn.style.setProperty('box-shadow', 'inset 0 3px 8px rgba(0,0,0,0.6)', 'important');
+                    const isLight = doc.documentElement.getAttribute('data-theme') === 'light';
+                    btn.style.setProperty('background', isLight ? '#E2E8F0' : '#181825', 'important');
+                    btn.style.setProperty('background-color', isLight ? '#E2E8F0' : '#181825', 'important');
+                    btn.style.setProperty('border', isLight ? '2px dashed #94A3B8' : '2px dashed #313244', 'important');
+                    btn.style.setProperty('opacity', isLight ? '0.65' : '0.35', 'important');
+                    btn.style.setProperty('box-shadow', isLight ? 'inset 0 2px 6px rgba(0,0,0,0.08)' : 'inset 0 3px 8px rgba(0,0,0,0.6)', 'important');
                 }
             });
         }
