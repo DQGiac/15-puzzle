@@ -1,7 +1,6 @@
 """Game engine operations for a 15-puzzle board."""
 
 import random
-
 from src.models.board_state import BoardState
 
 
@@ -17,6 +16,7 @@ class GameEngine:
 
     def __init__(self, board_state: BoardState | None = None) -> None:
         self.board_state = board_state if board_state is not None else BoardState()
+        self.history: list[tuple[int, int]] = []
 
     def reset_solved(self) -> None:
         """Reset to canonical solved state without shuffling."""
@@ -29,6 +29,7 @@ class GameEngine:
         self.board_state.empty_pos = (size - 1, size - 1)
         self.board_state.step_count = 0
         self.board_state.elapsed_time = 0.0
+        self.history.clear()
 
     def reset_and_shuffle(self, steps: int) -> None:
         """Reset to the solved board, then perform legal random moves."""
@@ -44,6 +45,7 @@ class GameEngine:
         self.board_state.empty_pos = (size - 1, size - 1)
         self.board_state.step_count = 0
         self.board_state.elapsed_time = 0.0
+        self.history.clear()
 
         previous_empty_pos: tuple[int, int] | None = None
         for _ in range(steps):
@@ -56,10 +58,25 @@ class GameEngine:
 
             current_empty_pos = self.board_state.empty_pos
             row, col = random.choice(valid_moves)
-            self.move(row, col)
+            self._internal_move(row, col)
             previous_empty_pos = current_empty_pos
 
         self.board_state.step_count = 0
+        self.history.clear()
+
+    def _internal_move(self, row: int, col: int) -> bool:
+        """Internal move without adding to user undo history."""
+        if not self.can_move(row, col):
+            return False
+        empty_row, empty_col = self.board_state.empty_pos
+        grid = self.board_state.grid
+        grid[empty_row][empty_col], grid[row][col] = (
+            grid[row][col],
+            grid[empty_row][empty_col],
+        )
+        self.board_state.empty_pos = (row, col)
+        self.board_state.step_count += 1
+        return True
 
     def get_valid_moves(self) -> list[tuple[int, int]]:
         """Return coordinates of tiles adjacent to the empty cell."""
@@ -87,6 +104,8 @@ class GameEngine:
             return False
 
         empty_row, empty_col = self.board_state.empty_pos
+        self.history.append((empty_row, empty_col))
+
         grid = self.board_state.grid
         grid[empty_row][empty_col], grid[row][col] = (
             grid[row][col],
@@ -95,6 +114,25 @@ class GameEngine:
         self.board_state.empty_pos = (row, col)
         self.board_state.step_count += 1
         return True
+
+    def undo(self) -> bool:
+        """Hoàn tác bước đi gần nhất (Undo)."""
+        if not self.history:
+            return False
+        prev_row, prev_col = self.history.pop()
+        empty_row, empty_col = self.board_state.empty_pos
+        grid = self.board_state.grid
+        grid[empty_row][empty_col], grid[prev_row][prev_col] = (
+            grid[prev_row][prev_col],
+            grid[empty_row][empty_col],
+        )
+        self.board_state.empty_pos = (prev_row, prev_col)
+        self.board_state.step_count = max(0, self.board_state.step_count - 1)
+        return True
+
+    def can_undo(self) -> bool:
+        """Kiểm tra có thể hoàn tác bước đi không."""
+        return len(self.history) > 0
 
     def move_by_direction(self, direction: str) -> bool:
         """
