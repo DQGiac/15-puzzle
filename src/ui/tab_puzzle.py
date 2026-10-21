@@ -13,6 +13,7 @@ Bao gồm:
 """
 
 import time
+from html import escape
 import streamlit as st
 import streamlit.components.v1 as components
 
@@ -122,11 +123,32 @@ def stop_timer() -> float:
 
 
 def format_time_mmss(seconds_float: float) -> str:
-    """Định dạng thời gian theo chuẩn mm:ss giống trong GameScene::Draw()."""
-    total_sec = int(seconds_float)
+    """Định dạng thời gian mm:ss.t, với độ chính xác một phần mười giây."""
+    # Dùng phép cắt thay vì làm tròn để đồng hồ không hiển thị trước thời gian thực.
+    total_tenths = int(seconds_float * 10)
+    total_sec, tenths = divmod(total_tenths, 10)
     minutes = total_sec // 60
     seconds = total_sec % 60
-    return f"{minutes:d}:{seconds:02d}"
+    return f"{minutes:d}:{seconds:02d}.{tenths}"
+
+
+def render_live_timer():
+    """Vẽ đồng hồ; JavaScript sẽ cập nhật phần hiển thị mỗi 0,1 giây."""
+    engine: GameEngine = st.session_state.game_engine
+    elapsed = get_current_time()
+    engine.board_state.elapsed_time = elapsed
+    is_running = str(st.session_state.get("timer_running", False)).lower()
+    start_timestamp = st.session_state.get("start_timestamp") or 0.0
+    accumulated_time = st.session_state.get("accumulated_time", 0.0)
+    st.markdown(
+        '<div class="raylib-header-box">'
+        '<div class="raylib-title">15 PUZZLE</div>'
+        f'<div class="raylib-timer" data-timer-running="{is_running}" '
+        f'data-start-timestamp="{start_timestamp}" '
+        f'data-accumulated-time="{accumulated_time}">{format_time_mmss(elapsed)}</div>'
+        '</div>',
+        unsafe_allow_html=True,
+    )
 
 
 def inject_cpp_board_styler_and_shortcuts():
@@ -265,6 +287,27 @@ def inject_cpp_board_styler_and_shortcuts():
 
         window.addEventListener('resize', applyCppStyles);
 
+        // Chỉ cập nhật chữ số của đồng hồ ở trình duyệt. Nhờ đó click tile
+        // không bị xung đột với một Streamlit fragment đang tự rerun.
+        if (window.__puzzle_timer_interval) {
+            window.clearInterval(window.__puzzle_timer_interval);
+        }
+        function updatePuzzleTimer() {
+            const timer = doc.querySelector('.raylib-timer');
+            if (!timer || timer.dataset.timerRunning !== 'true') return;
+
+            const accumulated = Number(timer.dataset.accumulatedTime) || 0;
+            const startedAt = Number(timer.dataset.startTimestamp) || 0;
+            const elapsed = accumulated + Math.max(0, Date.now() / 1000 - startedAt);
+            const totalTenths = Math.floor(elapsed * 10);
+            const totalSeconds = Math.floor(totalTenths / 10);
+            const minutes = Math.floor(totalSeconds / 60);
+            const seconds = String(totalSeconds % 60).padStart(2, '0');
+            timer.textContent = `${minutes}:${seconds}.${totalTenths % 10}`;
+        }
+        updatePuzzleTimer();
+        window.__puzzle_timer_interval = window.setInterval(updatePuzzleTimer, 100);
+
         if (!window.__cpp_board_observer) {
             window.__cpp_board_observer = true;
             const observer = new MutationObserver(() => {
@@ -365,8 +408,9 @@ def render_tab_puzzle():
         st.session_state.ai_auto_playing = False
         st.session_state.status_message = "CHÚC MỪNG! Bạn đã hoàn thành 15-Puzzle!"
 
+    # Dùng cho màn hình chiến thắng và dữ liệu lưu điểm. Đồng hồ trên header
+    # được JavaScript cập nhật độc lập, còn giá trị này luôn lấy từ Session State.
     elapsed = get_current_time()
-    engine.board_state.elapsed_time = elapsed
     time_str = format_time_mmss(elapsed)
 
     # =========================================================================
@@ -380,14 +424,8 @@ def render_tab_puzzle():
     with col_board:
         with st.container():
             # Header bàn cờ và anchor nhận diện cho CSS/JS
-            header_html = (
-                f'<div id="c-raylib-board-frame" style="display:none;"></div>'
-                f'<div class="raylib-header-box">'
-                f'<div class="raylib-title">15 PUZZLE</div>'
-                f'<div class="raylib-timer">{time_str}</div>'
-                f'</div>'
-            )
-            st.markdown(header_html, unsafe_allow_html=True)
+            st.markdown('<div id="c-raylib-board-frame" style="display:none;"></div>', unsafe_allow_html=True)
+            render_live_timer()
 
             grid = engine.board_state.grid
             size = engine.board_state.size
@@ -433,8 +471,9 @@ def render_tab_puzzle():
 
             footer_html = (
                 f'<div class="raylib-footer-box">'
-                f'<div>Số bước: {engine.board_state.step_count}</div>'
-                f'<div>{st.session_state.status_message}</div>'
+                f'<div class="raylib-step-count">Số bước: {engine.board_state.step_count}</div>'
+                f'<div class="raylib-status-message" title="{escape(st.session_state.status_message, quote=True)}">'
+                f'{escape(st.session_state.status_message)}</div>'
                 f'</div>'
                 f'{solving_html}'
             )

@@ -98,8 +98,23 @@ html, body, [class*="css"] {{
     justify-content: space-between;
     align-items: center;
     color: #BAC2DE;
-    font-size: 1rem;
+    font-size: 0.9rem;
     font-weight: 700;
+    gap: 12px;
+}}
+
+.raylib-step-count {{
+    flex: 0 0 auto;
+    white-space: nowrap;
+}}
+
+.raylib-status-message {{
+    min-width: 0;
+    max-width: 28rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    text-align: right;
 }}
 
 .raylib-solving-status {{
