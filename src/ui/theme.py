@@ -570,6 +570,41 @@ button[kind="primary"]:not(.c-square-tile):active:not(:disabled) {{
 """
 
 
-def inject_theme_system():
-    """Nhúng toàn bộ CSS Dark Catppuccin & Cyberpunk UI vào ứng dụng Streamlit."""
-    st.markdown(THEME_CSS, unsafe_allow_html=True)
+LIGHT_THEME_OVERRIDES = """
+<style>
+.stApp { background: radial-gradient(ellipse at 50% 0%, #fff 0%, #eef4ff 58%, #e4ebf8 100%) !important; color: #1e293b !important; }
+::-webkit-scrollbar-track { background: #e2e8f0; }
+::-webkit-scrollbar-thumb { background: #94a3b8; }
+.stApp h1, .stApp h2, .stApp h3, .stApp h4, .stApp p, .stApp label, .stApp li, [data-testid="stMarkdownContainer"] { color: #1e293b; }
+.raylib-header-box, .raylib-footer-box { border-color: #cbd5e1 !important; color: #334155 !important; }
+.raylib-solving-status { color: #a16207 !important; }
+.raylib-step-count { color: #1e40af !important; }
+.raylib-status-message { color: #1e40af !important; }
+.hero-header-card { background: linear-gradient(135deg, rgba(255,255,255,.94), rgba(239,246,255,.96)) !important; border-color: rgba(59,130,246,.3) !important; box-shadow: 0 10px 30px rgba(15,23,42,.10) !important; }
+.app-title-gradient { background: linear-gradient(135deg, #1d4ed8, #7e22ce, #be185d) !important; -webkit-background-clip: text !important; -webkit-text-fill-color: transparent !important; }
+.hero-subtitle { color: #475569 !important; }
+.stTabs [data-baseweb="tab-list"] { background: rgba(255,255,255,.82) !important; border-color: #cbd5e1 !important; }
+.stTabs [data-baseweb="tab"] { color: #475569 !important; }
+.stTabs [aria-selected="true"] { background: #dbeafe !important; color: #1d4ed8 !important; }
+[data-testid="stMetric"], [data-testid="stVerticalBlockBorderWrapper"] { background: rgba(255,255,255,.78) !important; border-color: #cbd5e1 !important; }
+[data-testid="stMetricLabel"] { color: #475569 !important; }
+[data-testid="stMetricValue"] { color: #1d4ed8 !important; text-shadow: none !important; }
+[data-testid="stTextInput"] input, [data-testid="stTextArea"] textarea { background: #fff !important; border-color: #cbd5e1 !important; color: #1e293b !important; }
+[data-testid="stExpander"] { background: rgba(255,255,255,.82) !important; border-color: #cbd5e1 !important; }
+.leaderboard-card { background: #fff !important; border-color: #cbd5e1 !important; box-shadow: 0 10px 30px rgba(15,23,42,.10) !important; }
+.leaderboard-table { color: #1e293b !important; }
+.leaderboard-table th { background: #eff6ff !important; color: #334155 !important; border-color: #cbd5e1 !important; }
+.leaderboard-table td { border-color: #e2e8f0 !important; }
+.bench-stat-chip { background: #fff !important; border-color: #cbd5e1 !important; box-shadow: none !important; }
+.chip-label { color: #475569 !important; }
+.chip-val, .badge-steps { color: #1d4ed8 !important; }
+.bench-card-ida, .bench-card-astar { background: rgba(255,255,255,.9) !important; box-shadow: 0 8px 24px rgba(15,23,42,.08) !important; }
+button[kind="secondary"]:not(.c-square-tile) { background: #fff !important; border-color: #94a3b8 !important; color: #1e293b !important; box-shadow: 0 3px 8px rgba(15,23,42,.08) !important; }
+button[kind="secondary"]:not(.c-square-tile):hover:not(:disabled) {
+    background: linear-gradient(#fff, #fff) padding-box, linear-gradient(135deg, #60a5fa, #a78bfa, #f472b6) border-box !important;
+    border-color: transparent !important;
+    color: #1e293b !important;
+    box-shadow: 0 6px 18px rgba(96,165,250,.25) !important;
+}
+</style>
+"""
