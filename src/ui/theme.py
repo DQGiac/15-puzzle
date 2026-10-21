@@ -608,3 +608,10 @@ button[kind="secondary"]:not(.c-square-tile):hover:not(:disabled) {
 }
 </style>
 """
+
+
+def inject_theme_system(theme: str = "dark"):
+    """Nhúng CSS và áp dụng theme sáng hoặc tối theo lựa chọn hiện tại."""
+    st.markdown(THEME_CSS, unsafe_allow_html=True)
+    if theme == "light":
+        st.markdown(LIGHT_THEME_OVERRIDES, unsafe_allow_html=True)
