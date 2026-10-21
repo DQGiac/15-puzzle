@@ -19,21 +19,28 @@ st.set_page_config(
     initial_sidebar_state="collapsed",
 )
 
-# 2. Khởi tạo CSS và Theme tối ưu
-inject_theme_system()
+# 2. Theme sáng/tối (giữ nguyên trong session hiện tại)
+if "theme_mode" not in st.session_state:
+    st.session_state.theme_mode = "dark"
+
+theme_col, _ = st.columns([1, 7])
+with theme_col:
+    is_dark = st.session_state.theme_mode == "dark"
+    if st.button(
+        "☀️ Chế độ sáng" if is_dark else "🌙 Chế độ tối",
+        key="theme_toggle",
+        use_container_width=True,
+    ):
+        st.session_state.theme_mode = "light" if is_dark else "dark"
+        st.rerun()
+
+inject_theme_system(st.session_state.theme_mode)
 
 # 3. Hero Header Banner hiện đại
 hero_html = """
 <div class="hero-header-card">
     <div class="hero-title-area">
         <h1 class="app-title-gradient">🧩 15-Puzzle Game & AI Solver</h1>
-        <p class="hero-subtitle">Trò chơi trượt ô số 4×4 kinh điển chuẩn C++ Raylib • Tích hợp AI đối đầu IDA* vs A*</p>
-    </div>
-    <div class="hero-badges-group">
-        <span class="tech-pill accent-blue">⚡ IDA* Heuristic</span>
-        <span class="tech-pill accent-purple">🌲 A* MinHeap</span>
-        <span class="tech-pill accent-gold">🏆 Top 10 Records</span>
-        <span class="tech-pill">🎮 C++ Raylib Engine</span>
     </div>
 </div>
 """

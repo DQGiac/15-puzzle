@@ -45,7 +45,7 @@ def render_tab_leaderboard():
                 rows_html += f"""
                 <tr class="{row_cls}">
                     <td style="font-weight: 800;">{rank_str}</td>
-                    <td><strong style="color: #FFFFFF;">{rec.player_name}</strong></td>
+                    <td><strong style="color: #89B4FA;">{rec.player_name}</strong></td>
                     <td><span class="badge-steps">{rec.step_count}</span></td>
                     <td><span style="color: #A6E3A1; font-weight: 800; font-family: monospace;">{rec.elapsed_time:.1f}s</span></td>
                     <td style="opacity: 0.75; font-size: 0.85rem; font-family: monospace;">{rec.date_played}</td>
